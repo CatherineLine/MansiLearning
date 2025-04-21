@@ -40,23 +40,30 @@ class _TranslatePageState extends State<TranslatePage> {
       final TextEditingController controller1 = TextEditingController();
       final TextEditingController controller2 = TextEditingController();
       Timer? _debounce; // Таймер для задержки отправки
+      bool _isSwapped = false;
 
-  // Функция для отправки запроса и получения перевода
+  // Функция для отправки запроса и получения перевода c русского
   Future<void> getTranslate(String text) async {
+    // Определяем языки в зависимости от флага _isSwapped
+    final int sourceLanguage = _isSwapped ? 2 : 1; // Если флаг активен, меняем языки местами
+    final int targetLanguage = _isSwapped ? 1 : 2;
+
     final Map<String, dynamic> data = {
       "text": text,
-      "sourceLanguage": 1, // id русского языка
-      "targetLanguage": 2  // id мансийского языка
+      "sourceLanguage": sourceLanguage,
+      "targetLanguage": targetLanguage,
     };
     try {
       final response = await http.post(
         Uri.parse(translateApiEndpoint),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(data),
+        //Интересные моменты перевода: Русский ÐÑÐ¸Ð²ÐµÑ Мансийский ÐÐµÐ½ÑÐ¸Ð½Ð° Ð¿Ð¾ Ð¸Ð¼ÐµÐ½Ð¸ ÐÐ½Ð½Ð°.
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
+        String responseBody = utf8.decode(response.bodyBytes); // Декодируем байты в строку
+        final Map<String, dynamic> responseData = json.decode(responseBody);
         setState(() {
           controller2.text = responseData['translatedText'] ?? 'Ошибка: Перевод не найден';
         });
@@ -72,6 +79,15 @@ class _TranslatePageState extends State<TranslatePage> {
     }
   }
 
+  void swapLanguages() {
+    setState(() {
+      _isSwapped = !_isSwapped; // Переключаем флаг
+    });
+    getTranslate(controller1.text); // После смены языков вызываем перевод
+  }
+
+  // Функция для отправки запроса и получения перевода c русского
+
   // Обработчик изменения текста
   void _onTextChanged(String text) {
     // Отменяем предыдущий таймер, если текст изменился раньше
@@ -79,7 +95,7 @@ class _TranslatePageState extends State<TranslatePage> {
 
     // Запускаем новый таймер, который выполнит запрос через 3 секунды
     _debounce = Timer(const Duration(seconds: 2), () {
-      getTranslate(text); // Отправляем текст в API
+      _isSwapped == true ? getTranslate(text): getTranslate(text); // Отправляем текст в API
     });
   }
 
@@ -99,10 +115,10 @@ class _TranslatePageState extends State<TranslatePage> {
   void swapTextFields() {
     setState(() {
       // Меняем местами текстовые окна
+      _isSwapped != _isSwapped;
       String temp = text1;
       text1 = text2;
       text2 = temp;
-
       // Обновляем текстовые поля
       String tempController = controller1.text;
       controller1.text = controller2.text;
@@ -162,7 +178,7 @@ class _TranslatePageState extends State<TranslatePage> {
                     shape: CircleBorder(), // Круглая форма кнопки
                     padding: EdgeInsets.all(12), // Размер кнопки
                   ),
-                  onPressed: swapTextFields,
+                  onPressed: swapLanguages,
                   child: Icon(
                   Icons.swap_horiz,
                   color:Colors.white,
@@ -193,8 +209,7 @@ class _TranslatePageState extends State<TranslatePage> {
                     isDense: true,
                     filled: true,
                     isCollapsed: true,
-                    contentPadding: EdgeInsets.all(16),
-                    hintText: 'Текст на русском'),
+                    contentPadding: EdgeInsets.all(16),),
                   keyboardType: TextInputType.multiline,
                   maxLines: 10,
                   onChanged: _onTextChanged, // Каждый раз, когда изменяется текст
@@ -215,7 +230,6 @@ class _TranslatePageState extends State<TranslatePage> {
                   filled: true,
                   isCollapsed: true,
                   contentPadding: EdgeInsets.all(16),
-                  hintText: 'Текст на мансийском'
                 ),
                 keyboardType: TextInputType.multiline,
                 readOnly: true, // Делаем поле только для чтения
