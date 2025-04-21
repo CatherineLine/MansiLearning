@@ -3,8 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+
 void main() {
   runApp(MyApp());
+}
+
+
+// Класс для хранения пары: исходное слово и перевод
+class TranslationHistoryItem {
+  final String originalText;
+  final String translatedText;
+
+  TranslationHistoryItem(this.originalText, this.translatedText);
 }
 
 class MyApp extends StatelessWidget {
@@ -34,13 +44,18 @@ class LevelPage extends StatefulWidget {
   State <LevelPage> createState() => _LevelPageState();
 }
 
+
+
+
 class _TranslatePageState extends State<TranslatePage> {
   final String translateApiEndpoint =
       "https://ethnoportal.admhmao.ru/api/machine-translates/translate";
-      final TextEditingController controller1 = TextEditingController();
-      final TextEditingController controller2 = TextEditingController();
-      Timer? _debounce; // Таймер для задержки отправки
-      bool _isSwapped = false;
+  final TextEditingController controller1 = TextEditingController();
+  final TextEditingController controller2 = TextEditingController();
+  Timer? _debounce; // Таймер для задержки отправки
+  bool _isSwapped = false;
+  List<TranslationHistoryItem> translationHistory = []; // История переводов
+
 
   // Функция для отправки запроса и получения перевода c русского
   Future<void> getTranslate(String text) async {
@@ -48,6 +63,12 @@ class _TranslatePageState extends State<TranslatePage> {
     final int sourceLanguage = _isSwapped ? 2 : 1; // Если флаг активен, меняем языки местами
     final int targetLanguage = _isSwapped ? 1 : 2;
 
+// Функция для сохранения перевода в историю
+    void saveTranslationHistory(String originalText, String translatedText) {
+      setState(() {
+        translationHistory.add(TranslationHistoryItem(originalText, translatedText)); // Добавляем пару в историю
+      });
+    }
     final Map<String, dynamic> data = {
       "text": text,
       "sourceLanguage": sourceLanguage,
@@ -65,7 +86,11 @@ class _TranslatePageState extends State<TranslatePage> {
         final Map<String, dynamic> responseData = json.decode(responseBody);
         setState(() {
           controller2.text = responseData['translatedText'] ?? 'Ошибка: Перевод не найден';
+          // Сохраняем исходное слово и перевод в историю
         });
+
+        saveTranslationHistory(text, controller2.text);
+
       } else {
         setState(() {
           controller2.text = 'Ошибка при запросе данных';
@@ -80,9 +105,31 @@ class _TranslatePageState extends State<TranslatePage> {
 
   void swapLanguages() {
     setState(() {
+      // Меняем местами текстовые окна
+      _isSwapped != _isSwapped;
+      String temp = text1;
+      text1 = text2;
+      text2 = temp;
+      // Обновляем текстовые поля
+      String tempController = controller1.text;
+      controller1.text = controller2.text;
+      controller2.text = tempController;
+    });// После смены языков вызываем перевод
+    setState(() {
       _isSwapped = !_isSwapped; // Переключаем флаг
     });
-    getTranslate(controller1.text); // После смены языков вызываем перевод
+    getTranslate(controller1.text);
+  }
+
+
+
+
+  // Функция для перехода на страницу истории
+  void goToHistoryPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => TranslationHistoryPage(history: translationHistory)),
+    );
   }
 
   // Функция для отправки запроса и получения перевода c русского
@@ -110,21 +157,6 @@ class _TranslatePageState extends State<TranslatePage> {
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
-  // Метод для обмена местами текстовых окон и обновления текстовых полей
-  void swapTextFields() {
-    setState(() {
-      // Меняем местами текстовые окна
-      _isSwapped != _isSwapped;
-      String temp = text1;
-      text1 = text2;
-      text2 = temp;
-      // Обновляем текстовые поля
-      String tempController = controller1.text;
-      controller1.text = controller2.text;
-      controller2.text = tempController;
-    });
-  }
-
   @override
   void dispose() {
     _debounce?.cancel(); // Отменяем таймер при закрытии экрана
@@ -139,21 +171,30 @@ class _TranslatePageState extends State<TranslatePage> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text("Переводчик"),
-        backgroundColor: Color(0xFF0A4B47),
-        foregroundColor: Colors.white, // Цвет текста (и иконок)
-        actions: [ElevatedButton(
-          onPressed: _openMenu,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0A4B47), // Цвет фона кнопки (синий)
-            shape: CircleBorder(), // Круглая форма кнопки
-            padding: EdgeInsets.all(12), // Размер кнопки
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            "assets/images/logo.png",
           ),
-          child: Icon(
-            Icons.menu,
-            color:Colors.white,
-            size: 30,),
-        ),]
+        ),
+          title: Text("Переводчик"),
+          backgroundColor: Color(0xFF0A4B47),
+          foregroundColor: Colors.white, // Цвет текста (и иконок)
+          actions: [
+            ElevatedButton(
+            onPressed: _openMenu,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF0A4B47), // Цвет фона кнопки (синий)
+              shape: CircleBorder(), // Круглая форма кнопки
+              padding: EdgeInsets.all(12), // Размер кнопки
+            ),
+            child: Icon(
+              Icons.menu,
+              color:Colors.white,
+              size: 30,),
+          ),
+          ]
+
       ),
       body: Center(
         child: ListView(
@@ -179,9 +220,9 @@ class _TranslatePageState extends State<TranslatePage> {
                   ),
                   onPressed: swapLanguages,
                   child: Icon(
-                  Icons.swap_horiz,
-                  color:Colors.white,
-                  size: 30,
+                    Icons.swap_horiz,
+                    color:Colors.white,
+                    size: 30,
                   ),
                 ),
                 // Второе текстовое окно
@@ -196,14 +237,14 @@ class _TranslatePageState extends State<TranslatePage> {
             ),
             // Текстовое поле для первого текстa
             Container(
-              margin: EdgeInsets.all(16),
-              child: TextField(
+                margin: EdgeInsets.all(16),
+                child: TextField(
                   textAlignVertical: TextAlignVertical.top,
                   controller: controller1,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12), // Округление углов
-                        borderSide: BorderSide(color: Colors.black), // Чёрная обводка
+                      borderRadius: BorderRadius.circular(12), // Округление углов
+                      borderSide: BorderSide(color: Colors.black), // Чёрная обводка
                     ),
                     isDense: true,
                     filled: true,
@@ -212,7 +253,7 @@ class _TranslatePageState extends State<TranslatePage> {
                   keyboardType: TextInputType.multiline,
                   maxLines: 10,
                   onChanged: _onTextChanged, // Каждый раз, когда изменяется текст
-              )
+                )
             )
             ,
             // Текстовое поле для второго текста
@@ -255,13 +296,22 @@ class _TranslatePageState extends State<TranslatePage> {
                 },
               ),
               ListTile(
-                title: Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black),),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => LevelPage()),
-                  );
-                } //,
+                  title: Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black),),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LevelPage()),
+                    );
+                  } //,
+              ),
+              ListTile(
+                  title: Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black),),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => TranslationHistoryPage(history: translationHistory)),
+                    );
+                  } //,
               ),
             ],
           ),
@@ -271,6 +321,7 @@ class _TranslatePageState extends State<TranslatePage> {
   }
 }
 
+
 class _LevelPageState extends State<LevelPage> {
   // Переменная для хранения правильного ответа
   final String correctAnswer = "Пася о̄лэ̄н";
@@ -279,6 +330,7 @@ class _LevelPageState extends State<LevelPage> {
 
   // Список слов для выбора
   List<String> options = ["ЛЯ̄ХХАЛЫТ", "Пася о̄лэ̄н", "Ань ты мус"];
+  List<TranslationHistoryItem> translationHistory = []; // История переводов
 
   // Функция для обработки выбора
   void onOptionSelected(String answer) {
@@ -288,6 +340,13 @@ class _LevelPageState extends State<LevelPage> {
     });
   }
 
+  // Функция для перехода на страницу истории
+  void goToHistoryPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => TranslationHistoryPage(history: translationHistory)),
+    );
+  }
 
   // Контроллер для управления анимацией
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -304,7 +363,7 @@ class _LevelPageState extends State<LevelPage> {
           backgroundColor: Color(0xFF0A4B47),
           foregroundColor: Colors.white, // Цвет текста (и иконок)
           actions: [ElevatedButton(
-            onPressed: _openMenu,
+            onPressed: _openMenu, //нихуя не работает
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xFF0A4B47), // Цвет фона кнопки (синий)
               shape: CircleBorder(), // Круглая форма кнопки
@@ -319,73 +378,268 @@ class _LevelPageState extends State<LevelPage> {
       body: Padding(
         padding: EdgeInsets.all(16.0),
         child: ListView(
-          children: <Widget>[
-            // Заголовок
-            Text(
-              'Какое слово переводится на русский как "Привет"?',
-              style: TextStyle(fontSize: 24),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 20),
-            // Кнопки для выбора
-            for (var option in options)
-              Container(
-                margin: EdgeInsets.all(8),
-              child: ElevatedButton(
-                onPressed: isAnswered
-                    ? null // Отключаем кнопки после ответа
-                    : () => onOptionSelected(option),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedAnswer == option
-                      ? (option == correctAnswer
-                      ? Color(0xFF00B333) // Правильный ответ — зелёный
-                      : Color(0xFFE3001B)) // Неправильный ответ — красный
-                      : Color(0xFFE7E4DF), // По умолчанию
-                ), // add margin here
-                  child: Text(
-                      option,
-                      style:
-                      TextStyle(fontSize: 18, color: Colors.black)
-                  )
-                ),
-              ),
-
-            SizedBox(height: 30),
-            // Поздравление или сообщение об ошибке
-            if (isAnswered)
+            children: <Widget>[
+              // Заголовок
               Text(
-                selectedAnswer == correctAnswer
-                    ? 'Поздравляю! Вы выбрали правильный перевод!'
-                    : 'Неправильно! Попробуйте ещё раз.',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: selectedAnswer == correctAnswer
-                      ? Color(0xFF00B333)
-                      : Color(0xFFE3001B),
-                ),
+                'Привет, дорогой друг! Поздоровайся со мной тоже, пожалуйста. Какое слово переводится на русский как "Привет"?',
+                style: TextStyle(fontSize: 24),
                 textAlign: TextAlign.center,
               ),
-            SizedBox(height: 20),
-            // Кнопка для сброса и нового выбора
-            if (isAnswered)
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFE7E4DF), // Цвет фона кнопки
+              SizedBox(height: 20),
+              // Кнопки для выбора
+              for (var option in options)
+                Container(
+                  margin: EdgeInsets.all(8),
+                  child: ElevatedButton(
+                      onPressed: isAnswered
+                          ? null // Отключаем кнопки после ответа
+                          : () => onOptionSelected(option),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedAnswer == option
+                            ? (option == correctAnswer
+                            ? Color(0xFF00B333) // Правильный ответ — зелёный
+                            : Color(0xFFE3001B)) // Неправильный ответ — красный
+                            : Color(0xFFE7E4DF), // По умолчанию
+                      ), // add margin here
+                      child: Text(
+                          option,
+                          style:
+                          TextStyle(fontSize: 18, color: Colors.black)
+                      )
+                  ),
                 ),
-                onPressed: () {
-                  setState(() {
-                    isAnswered = false;
-                    selectedAnswer = "";
-                  });
-                },
-                child: Text('Попробовать снова',
+
+              SizedBox(height: 30),
+              // Поздравление или сообщение об ошибке
+              if (isAnswered)
+                Text(
+                  selectedAnswer == correctAnswer
+                      ? 'Поздравляю! Вы выбрали правильный перевод!'
+                      : 'Неправильно! Попробуйте ещё раз.',
                   style: TextStyle(
-                  fontSize: 20,
-                  color: Colors.black),
-              ),
-              ),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: selectedAnswer == correctAnswer
+                        ? Color(0xFF00B333)
+                        : Color(0xFFE3001B),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              SizedBox(height: 20),
+              // Кнопка для сброса и нового выбора
+              if (isAnswered)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFE7E4DF), // Цвет фона кнопки
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      isAnswered = false;
+                      selectedAnswer = "";
+                    });
+                  },
+                  child: Text('Попробовать снова',
+                    style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.black),
+                  ),
+                ),
             ]
+        ),
+      ),
+      endDrawer: Drawer(
+        child: Container(
+          padding: EdgeInsets.only(top: 40),
+          decoration: BoxDecoration(color: Color(0xFFE7E4DF)),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              ListTile(
+                title: Text('Переводчик', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47)),),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslatePage()),
+                  );
+                },
+              ),
+              ListTile(
+                  title: Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black),),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LevelPage()),
+                    );
+                  } //,
+              ),
+              ListTile(
+                  title: Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black),),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => TranslationHistoryPage(history: translationHistory)),
+                    );
+                  } //,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+class TranslationHistoryPage extends StatefulWidget {
+  final List<TranslationHistoryItem> history;
+
+  // Получаем историю переводов через конструктор
+  const TranslationHistoryPage({super.key, required this.history});
+
+  @override
+  State <TranslationHistoryPage> createState() => _TranslationHistoryPageState();
+}
+
+class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
+  List<TranslationHistoryItem> filteredHistory = [];
+  TextEditingController searchController = TextEditingController();
+  List<TranslationHistoryItem> translationHistory = []; // История переводов
+
+  @override
+  void initState() {
+    super.initState();
+    filteredHistory = widget.history;  // Используем widget.history для доступа к истории
+
+    // Добавление функционала для поиска
+    searchController.addListener(() {
+      filterHistory();
+    });
+  }
+
+  // Фильтрация истории переводов
+  void filterHistory() {
+    setState(() {
+      filteredHistory = widget.history
+          .where((item) =>
+      item.originalText.toLowerCase().contains(searchController.text.toLowerCase()) ||
+          item.translatedText.toLowerCase().contains(searchController.text.toLowerCase()))
+          .toList();
+    });
+  }
+
+  // Функция для удаления перевода
+  void deleteTranslation(int index) {
+    setState(() {
+      widget.history.removeAt(index);  // Удаляем запись из оригинальной истории
+      filteredHistory = widget.history; // Обновляем отображаемую историю
+    });
+  }
+
+
+  // Контроллер для управления анимацией
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Метод для открытия меню
+  void _openMenu() {
+    _scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: AppBar(
+          title: Text("История переводов"),
+          leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Image.asset(
+                  "assets/images/logo.png",
+              ),
+          ),
+          backgroundColor: Color(0xFF0A4B47),
+          foregroundColor: Colors.white, // Цвет текста (и иконок)
+          actions: [
+            ElevatedButton(
+              onPressed: _openMenu,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0A4B47), // Цвет фона кнопки (синий)
+                shape: CircleBorder(), // Круглая форма кнопки
+                padding: EdgeInsets.all(12), // Размер кнопки
+              ),
+              child: Icon(
+                Icons.menu,
+                color:Colors.white,
+                size: 30,),
+            ),
+          ]
+      ),
+
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                labelText: "Поиск",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredHistory.length,
+              itemBuilder: (context, index) {
+                final item = filteredHistory[index];
+                return ListTile(
+                  title: Text("${item.originalText} -> ${item.translatedText}"),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () => deleteTranslation(index),  // Удаление записи
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      endDrawer: Drawer(
+        child: Container(
+          padding: EdgeInsets.only(top: 40),
+          decoration: BoxDecoration(color: Color(0xFFE7E4DF)),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              ListTile(
+                title: Text('Переводчик', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47)),),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslatePage()),
+                  );
+                },
+              ),
+              ListTile(
+                  title: Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black),),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LevelPage()),
+                    );
+                  } //,
+              ),
+              ListTile(
+                  title: Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black),),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => TranslationHistoryPage(history: translationHistory)),
+                    );
+                  } //,
+              ),
+            ],
+          ),
         ),
       ),
     );
