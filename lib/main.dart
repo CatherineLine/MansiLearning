@@ -58,7 +58,6 @@ class _TranslatePageState extends State<TranslatePage> {
         Uri.parse(translateApiEndpoint),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(data),
-        //Интересные моменты перевода: Русский ÐÑÐ¸Ð²ÐµÑ Мансийский ÐÐµÐ½ÑÐ¸Ð½Ð° Ð¿Ð¾ Ð¸Ð¼ÐµÐ½Ð¸ ÐÐ½Ð½Ð°.
       );
 
       if (response.statusCode == 200) {
