@@ -322,7 +322,7 @@ class _LevelPageState extends State<LevelPage> {
             children: <Widget>[
               // Заголовок
               Text(
-                'Какое слово переводится на русский как "Привет"?',
+                'Привет, дорогой друг! Поздоровайся со мной тоже, пожалуйста. Какое слово переводится на русский как "Привет"?',
                 style: TextStyle(fontSize: 24),
                 textAlign: TextAlign.center,
               ),
