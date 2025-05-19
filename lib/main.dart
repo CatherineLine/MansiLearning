@@ -262,8 +262,9 @@ class _TranslatePageState extends State<TranslatePage> {
                     ),
                   ],
                 ),
+                SizedBox(height: 10),
                 Container(
-                    margin: EdgeInsets.all(16),
+                    margin: EdgeInsets.all(10),
                     child: TextField(
                       focusNode: _focusNode,
                       textAlignVertical: TextAlignVertical.top,
@@ -275,7 +276,7 @@ class _TranslatePageState extends State<TranslatePage> {
                         isDense: true,
                         filled: true,
                         isCollapsed: true,
-                        contentPadding: EdgeInsets.all(16),
+                        contentPadding: EdgeInsets.all(10),
                       ),
                       keyboardType: TextInputType.multiline,
                       maxLines: 10,
@@ -283,7 +284,7 @@ class _TranslatePageState extends State<TranslatePage> {
                     )
                 ),
                 Container(
-                  margin: EdgeInsets.all(16),
+                  margin: EdgeInsets.all(10),
                   child: TextField(
                     controller: controller2,
                     decoration: InputDecoration(
@@ -293,7 +294,7 @@ class _TranslatePageState extends State<TranslatePage> {
                       isDense: true,
                       filled: true,
                       isCollapsed: true,
-                      contentPadding: EdgeInsets.all(16),
+                      contentPadding: EdgeInsets.all(10),
                     ),
                     keyboardType: TextInputType.multiline,
                     readOnly: true,
