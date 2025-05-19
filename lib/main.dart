@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-
 void main() {
   runApp(MyApp());
 }
-
 
 // Класс для хранения пары: исходное слово и перевод
 class TranslationHistoryItem {
@@ -15,6 +13,60 @@ class TranslationHistoryItem {
   final String translatedText;
 
   TranslationHistoryItem(this.originalText, this.translatedText);
+}
+
+// Класс мансийской клавиатуры
+class MansiKeyboard extends StatelessWidget {
+  final Function(String) onTextInput;
+  final VoidCallback onBackspace;
+
+  const MansiKeyboard({
+    super.key,
+    required this.onTextInput,
+    required this.onBackspace,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> mansiLetters = [
+      'а̄', 'о̄', 'ē', 'ы̄', 'э̄', 'ӈ', 'ю̄', 'ӣ', 'я̄', 'ё̄', 'ӯ'
+    ];
+    return Container(
+      color: Color(0xFF0A4B47),
+      padding: const EdgeInsets.all(5),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: mansiLetters.sublist(0, 11).map((letter) {
+              return _buildKey(letter);
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKey(String letter) {
+    return SizedBox(
+      width: 30, // Фиксированная ширина кнопок
+      height: 40, // Фиксированная высота кнопок
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(7),
+          ),
+          padding: EdgeInsets.all(3), // Убираем внутренние отступы
+        ),
+        onPressed: () => onTextInput(letter),
+        child: Text(
+          letter,
+          style: TextStyle(fontSize: 23),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -25,7 +77,7 @@ class MyApp extends StatelessWidget {
       title: 'Переводчик',
       color: const Color(0xFF0A4B47),
       theme: ThemeData(
-        scaffoldBackgroundColor: Color(0xFFE7E4DF), // Изменение фона приложения
+        scaffoldBackgroundColor: Color(0xFFE7E4DF),
       ),
       home: TranslatePage(),
     );
@@ -38,42 +90,62 @@ class TranslatePage extends StatefulWidget {
   State <TranslatePage> createState() => _TranslatePageState();
 }
 
-class LevelPage extends StatefulWidget {
-  const LevelPage({super.key});
-  @override
-  State <LevelPage> createState() => _LevelPageState();
-}
-
-
-
-
 class _TranslatePageState extends State<TranslatePage> {
   final String translateApiEndpoint =
       "https://ethnoportal.admhmao.ru/api/machine-translates/translate";
   final TextEditingController controller1 = TextEditingController();
   final TextEditingController controller2 = TextEditingController();
-  Timer? _debounce; // Таймер для задержки отправки
+  Timer? _debounce;
   bool _isSwapped = false;
-  List<TranslationHistoryItem> translationHistory = []; // История переводов
+  bool _isMansiLanguage = false;
+  bool _isKeyboardVisible = false;
+  final FocusNode _focusNode = FocusNode();
+  List<TranslationHistoryItem> translationHistory = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_keyboardListener);
+  }
 
-  // Функция для отправки запроса и получения перевода c русского
-  Future<void> getTranslate(String text) async {
-    // Определяем языки в зависимости от флага _isSwapped
-    final int sourceLanguage = _isSwapped ? 2 : 1; // Если флаг активен, меняем языки местами
-    final int targetLanguage = _isSwapped ? 1 : 2;
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _focusNode.removeListener(_keyboardListener);
+    _focusNode.dispose();
+    controller1.dispose();
+    controller2.dispose();
+    super.dispose();
+  }
 
-// Функция для сохранения перевода в историю
-    void saveTranslationHistory(String originalText, String translatedText) {
+  void _keyboardListener() {
+    if (_focusNode.hasFocus) {
       setState(() {
-        translationHistory.add(TranslationHistoryItem(originalText, translatedText)); // Добавляем пару в историю
+        _isKeyboardVisible = true;
+      });
+    } else {
+      setState(() {
+        _isKeyboardVisible = false;
       });
     }
+  }
+
+  Future<void> getTranslate(String text) async {
+    final int sourceLanguage = _isSwapped ? 2 : 1;
+    final int targetLanguage = _isSwapped ? 1 : 2;
+
+    void saveTranslationHistory(String originalText, String translatedText) {
+      setState(() {
+        translationHistory.add(TranslationHistoryItem(originalText, translatedText));
+      });
+    }
+
     final Map<String, dynamic> data = {
       "text": text,
       "sourceLanguage": sourceLanguage,
       "targetLanguage": targetLanguage,
     };
+
     try {
       final response = await http.post(
         Uri.parse(translateApiEndpoint),
@@ -82,15 +154,12 @@ class _TranslatePageState extends State<TranslatePage> {
       );
 
       if (response.statusCode == 200) {
-        String responseBody = utf8.decode(response.bodyBytes); // Декодируем байты в строку
+        String responseBody = utf8.decode(response.bodyBytes);
         final Map<String, dynamic> responseData = json.decode(responseBody);
         setState(() {
           controller2.text = responseData['translatedText'] ?? 'Ошибка: Перевод не найден';
-          // Сохраняем исходное слово и перевод в историю
         });
-
         saveTranslationHistory(text, controller2.text);
-
       } else {
         setState(() {
           controller2.text = 'Ошибка при запросе данных';
@@ -105,26 +174,27 @@ class _TranslatePageState extends State<TranslatePage> {
 
   void swapLanguages() {
     setState(() {
-      // Меняем местами текстовые окна
-      _isSwapped != _isSwapped;
+      _isSwapped = !_isSwapped;
       String temp = text1;
       text1 = text2;
       text2 = temp;
-      // Обновляем текстовые поля
+
       String tempController = controller1.text;
       controller1.text = controller2.text;
       controller2.text = tempController;
-    });// После смены языков вызываем перевод
-    setState(() {
-      _isSwapped = !_isSwapped; // Переключаем флаг
+
+      _isMansiLanguage = text1 == 'Мансийский';
     });
     getTranslate(controller1.text);
   }
 
+  void _onTextChanged(String text) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(seconds: 2), () {
+      getTranslate(text);
+    });
+  }
 
-
-
-  // Функция для перехода на страницу истории
   void goToHistoryPage() {
     Navigator.push(
       context,
@@ -132,152 +202,124 @@ class _TranslatePageState extends State<TranslatePage> {
     );
   }
 
-  // Функция для отправки запроса и получения перевода c русского
-
-  // Обработчик изменения текста
-  void _onTextChanged(String text) {
-    // Отменяем предыдущий таймер, если текст изменился раньше
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
-
-    // Запускаем новый таймер, который выполнит запрос через 3 секунды
-    _debounce = Timer(const Duration(seconds: 2), () {
-      _isSwapped == true ? getTranslate(text): getTranslate(text); // Отправляем текст в API
-    });
-  }
-
-  // Тексты для обоих текстовых окон
   String text1 = 'Русский';
   String text2 = 'Мансийский';
-
-  // Контроллер для управления анимацией
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Метод для открытия меню
   void _openMenu() {
     _scaffoldKey.currentState?.openEndDrawer();
   }
-
-  @override
-  void dispose() {
-    _debounce?.cancel(); // Отменяем таймер при закрытии экрана
-    controller1.dispose();
-    controller2.dispose();
-    super.dispose();
-  }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset(
-            "assets/images/logo.png",
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Image.asset("assets/images/logo.png"),
           ),
-        ),
           title: Text("Переводчик"),
           backgroundColor: Color(0xFF0A4B47),
-          foregroundColor: Colors.white, // Цвет текста (и иконок)
+          foregroundColor: Colors.white,
           actions: [
             ElevatedButton(
-            onPressed: _openMenu,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0A4B47), // Цвет фона кнопки (синий)
-              shape: CircleBorder(), // Круглая форма кнопки
-              padding: EdgeInsets.all(12), // Размер кнопки
+              onPressed: _openMenu,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0A4B47),
+                shape: CircleBorder(),
+                padding: EdgeInsets.all(12),
+              ),
+              child: Icon(Icons.menu, color:Colors.white, size: 30),
             ),
-            child: Icon(
-              Icons.menu,
-              color:Colors.white,
-              size: 30,),
-          ),
           ]
-
       ),
-      body: Center(
-        child: ListView(
-          children: [
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
               children: [
-                // Первое текстовое окно
-                Container(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    text1,
-                    style: TextStyle(fontSize: 20),
-                  ),
+                SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      child: Text(text1, style: TextStyle(fontSize: 20)),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF0A4B47),
+                        shape: CircleBorder(),
+                        padding: EdgeInsets.all(12),
+                      ),
+                      onPressed: swapLanguages,
+                      child: Icon(Icons.swap_horiz, color:Colors.white, size: 30),
+                    ),
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      child: Text(text2, style: TextStyle(fontSize: 20, color: Colors.black)),
+                    ),
+                  ],
                 ),
-                // Кнопка для обмена местами текстовых окон
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF0A4B47), // Цвет фона кнопки (синий)
-                    shape: CircleBorder(), // Круглая форма кнопки
-                    padding: EdgeInsets.all(12), // Размер кнопки
-                  ),
-                  onPressed: swapLanguages,
-                  child: Icon(
-                    Icons.swap_horiz,
-                    color:Colors.white,
-                    size: 30,
-                  ),
-                ),
-                // Второе текстовое окно
                 Container(
-                  padding: EdgeInsets.all(8),
-                  child: Text(
-                    text2,
-                    style: TextStyle(fontSize: 20, color: Colors.black),
+                    margin: EdgeInsets.all(16),
+                    child: TextField(
+                      focusNode: _focusNode,
+                      textAlignVertical: TextAlignVertical.top,
+                      controller: controller1,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.black)),
+                        isDense: true,
+                        filled: true,
+                        isCollapsed: true,
+                        contentPadding: EdgeInsets.all(16),
+                      ),
+                      keyboardType: TextInputType.multiline,
+                      maxLines: 10,
+                      onChanged: _onTextChanged,
+                    )
+                ),
+                Container(
+                  margin: EdgeInsets.all(16),
+                  child: TextField(
+                    controller: controller2,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.black)),
+                      isDense: true,
+                      filled: true,
+                      isCollapsed: true,
+                      contentPadding: EdgeInsets.all(16),
+                    ),
+                    keyboardType: TextInputType.multiline,
+                    readOnly: true,
+                    maxLines: 10,
                   ),
                 ),
               ],
             ),
-            // Текстовое поле для первого текстa
-            Container(
-                margin: EdgeInsets.all(16),
-                child: TextField(
-                  textAlignVertical: TextAlignVertical.top,
-                  controller: controller1,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12), // Округление углов
-                      borderSide: BorderSide(color: Colors.black), // Чёрная обводка
-                    ),
-                    isDense: true,
-                    filled: true,
-                    isCollapsed: true,
-                    contentPadding: EdgeInsets.all(16),),
-                  keyboardType: TextInputType.multiline,
-                  maxLines: 10,
-                  onChanged: _onTextChanged, // Каждый раз, когда изменяется текст
-                )
-            )
-            ,
-            // Текстовое поле для второго текста
-            Container(
-              margin: EdgeInsets.all(16),
-              child: TextField(
-                controller: controller2,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12), // Округление углов
-                    borderSide: BorderSide(color: Colors.black), // Чёрная обводка
-                  ),
-                  isDense: true,
-                  filled: true,
-                  isCollapsed: true,
-                  contentPadding: EdgeInsets.all(16),
-                ),
-                keyboardType: TextInputType.multiline,
-                readOnly: true, // Делаем поле только для чтения
-                maxLines: 10,
-              ),
+          ),
+          // Мансийская клавиатура
+          if (_isMansiLanguage && _isKeyboardVisible)
+            MansiKeyboard(
+              onTextInput: (text) {
+                final newText = controller1.text + text;
+                controller1.text = newText;
+                _onTextChanged(newText);
+              },
+              onBackspace: () {
+                if (controller1.text.isNotEmpty) {
+                  final newText = controller1.text.substring(0, controller1.text.length - 1);
+                  controller1.text = newText;
+                  _onTextChanged(newText);
+                }
+              },
             ),
-          ],
-        ),
+        ],
       ),
       endDrawer: Drawer(
         child: Container(
@@ -287,7 +329,7 @@ class _TranslatePageState extends State<TranslatePage> {
             padding: EdgeInsets.zero,
             children: <Widget>[
               ListTile(
-                title: Text('Переводчик', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47)),),
+                title: Text('Переводчик', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -296,22 +338,22 @@ class _TranslatePageState extends State<TranslatePage> {
                 },
               ),
               ListTile(
-                  title: Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black),),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => LevelPage()),
-                    );
-                  } //,
+                title: Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => LevelPage()),
+                  );
+                },
               ),
               ListTile(
-                  title: Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black),),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => TranslationHistoryPage(history: translationHistory)),
-                    );
-                  } //,
+                title: Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslationHistoryPage(history: translationHistory)),
+                  );
+                },
               ),
             ],
           ),
@@ -321,6 +363,12 @@ class _TranslatePageState extends State<TranslatePage> {
   }
 }
 
+
+class LevelPage extends StatefulWidget {
+  const LevelPage({super.key});
+  @override
+  State <LevelPage> createState() => _LevelPageState();
+}
 
 class _LevelPageState extends State<LevelPage> {
   // Переменная для хранения правильного ответа
