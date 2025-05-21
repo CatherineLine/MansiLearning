@@ -1,169 +1,258 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:developer';
-import 'dart:io';
+import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqflite;
 import 'package:sembast/sembast.dart' as sembast;
 import 'package:sembast_web/sembast_web.dart' as sembast_web;
+import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:web/web.dart' as web;
+import 'dart:typed_data'; // for Uint8List
+import 'package:js/js.dart' as js;
+import 'package:js/js_util.dart' as js_util;
+import 'package:sembast/sembast.dart';
+import 'package:sembast/sembast_io.dart' if (dart.library.html) 'package:sembast_web/sembast_web.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Инициализация для не-веб платформ
-  if (!kIsWeb) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-
-  // Инициализация базы данных (для не-веб платформ)
-  if (!kIsWeb) {
-    await AppDatabase.instance.database;
+  if (kIsWeb) {
+    web.document.addEventListener('dragover', _handleDragOver.toJS);
+    web.document.addEventListener('drop', _handleDrop.toJS);
   }
 
   runApp(const MyApp());
 }
 
-// 1. Создаем класс для работы с базой данных
-class AppDatabase {
-  static final AppDatabase instance = AppDatabase._init();
-  static dynamic _database; // Используем dynamic для совместимости с разными типами баз данных
+void _handleDragOver(web.Event e) {
+  e.preventDefault();
+}
 
-  AppDatabase._init();
-
-  Future<dynamic> get database async { // Возвращаем dynamic
-    if (_database != null) return _database;
-    _database = await _initDB('language_learning.db');
-    log('Database initialized successfully');
-    return _database;
-  }
-
-  Future<dynamic> _initDB(String filePath) async {
-    if (kIsWeb) {
-      // Используем sembast для веба
-      final dbFactory = sembast_web.databaseFactoryWeb;
-      return await dbFactory.openDatabase(filePath); // Возвращаем sembast.Database
-    } else {
-      // Используем sqflite для десктопа
-      final dbPath = await getDatabasesPath();
-      final path = join(dbPath, filePath);
-      return await sqflite.openDatabase(path, version: 1, onCreate: _createDB);
-    }
-  }
-
-  Future _createDB(dynamic db, int version) async { // Используем dynamic
-    if (!kIsWeb) {
-      // Таблицы для sqflite
-      await (db as sqflite.Database).execute('''
-        CREATE TABLE learning_progress (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          module_id INTEGER NOT NULL,
-          level INTEGER NOT NULL,
-          is_completed BOOLEAN NOT NULL,
-          score INTEGER,
-          last_accessed TEXT,
-          UNIQUE(module_id, level)
-        )
-      ''');
-      await (db as sqflite.Database).execute('''
-        CREATE TABLE translation_history (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          original_text TEXT NOT NULL,
-          translated_text TEXT NOT NULL,
-          timestamp TEXT NOT NULL,
-          direction TEXT NOT NULL
-        )
-      ''');
-      await (db as sqflite.Database).execute('''
-        CREATE TABLE completed_tasks (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          module_id INTEGER NOT NULL,
-          level INTEGER NOT NULL,
-          task_type TEXT NOT NULL,
-          is_correct BOOLEAN NOT NULL,
-          timestamp TEXT NOT NULL
-        )
-      ''');
-    }
-  }
-
-  Future<void> addTranslation(String original, String translated, String timestamp, String direction) async {
-    final db = await instance.database;
-    if (kIsWeb) {
-      final store = sembast.intMapStoreFactory.store('translation_history');
-      await store.add(db as sembast.Database, { // Используем store.add
-        'original_text': original,
-        'translated_text': translated,
-        'timestamp': timestamp,
-        'direction': direction,
-      });
-    } else {
-      await (db as sqflite.Database).insert('translation_history', {
-        'original_text': original,
-        'translated_text': translated,
-        'timestamp': timestamp,
-        'direction': direction,
-      });
-    }
-  }
-
-
-  Future<List<Map<String, dynamic>>> getTranslationHistory() async {
-    final db = await instance.database;
-    if (kIsWeb) {
-      final store = sembast.intMapStoreFactory.store('translation_history');
-      final records = await store.find(db as sembast.Database);
-      return records.map((record) => record.value as Map<String, dynamic>).toList();
-    } else {
-      return await (db as sqflite.Database).query('translation_history', orderBy: 'timestamp DESC');
-    }
-  }
-
-  Future<void> addCompletedTask(int moduleId, int level, String taskType, bool isCorrect) async {
-    final db = await instance.database;
-    await (db as sqflite.Database).insert(
-      'completed_tasks',
-      {
-        'module_id': moduleId,
-        'level': level,
-        'task_type': taskType,
-        'is_correct': isCorrect ? 1 : 0,
-        'timestamp': DateTime.now().toIso8601String(),
-      },
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getCompletedTasks(int moduleId, int level) async {
-    final db = await instance.database;
-    return await (db as sqflite.Database).query(
-      'completed_tasks',
-      where: 'module_id = ? AND level = ?',
-      whereArgs: [moduleId, level],
-    );
-  }
-
-  Future close() async {
-    final db = await instance.database;
-    if (!kIsWeb) {
-      await (db as sqflite.Database).close();
-    } else {
-      // sembast не требует явного закрытия в вебе
+void _handleDrop(web.Event e) {
+  final event = e as web.DragEvent;
+  event.preventDefault();
+  final files = event.dataTransfer?.files;
+  if (files != null && files.length > 0) {
+    final file = files.item(0);
+    if (file != null) {
+      final reader = web.FileReader();
+      reader.addEventListener('load', _handleFileLoad.toJS);
+      reader.readAsText(file);
     }
   }
 }
 
+void _handleFileLoad(web.Event e) {
+  // Приводим target к FileReader
+  final target = e.target;
+  if (target == null) return;
+
+  // Для веб-платформы используем JS-интероп для проверки типа
+  final reader = target is web.FileReader ? target : null;
+  if (reader == null) return;
+
+  // Получаем результат
+  final content = reader.result;
+  if (content == null) return;
+
+  // Конвертируем содержимое в строку
+  String contentString;
+  try {
+    if (content is String) {
+      contentString = content as String;
+    } else {
+      // Для JS-объектов используем js_util или прямое приведение
+      contentString = (content as JSObject).toString();
+    }
+  } catch (e) {
+    _showError('Ошибка чтения файла: $e');
+    return;
+  }
+
+  try {
+    final jsonData = json.decode(contentString) as Map<String, dynamic>;
+
+    if (jsonData['version'] == 1 && jsonData['data'] != null) {
+      AppDatabase().importAllData(jsonData)
+          .then((importedCount) {
+        _showSuccess('Импортировано $importedCount записей');
+      }).catchError((e) {
+        _showError('Ошибка импорта: $e');
+      });
+    } else {
+      _showError('Неверный формат файла', isError: false);
+    }
+  } catch (e) {
+    _showError('Ошибка обработки файла: $e');
+  }
+}
+
+void _showSuccess(String message) {
+  if (navigatorKey.currentContext != null && navigatorKey.currentState?.mounted == true) {
+    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+}
+
+void _showError(String message, {bool isError = true}) {
+  if (navigatorKey.currentContext != null && navigatorKey.currentState?.mounted == true) {
+    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: isError ? Colors.red : Colors.orange),
+    );
+  }
+}
+
+class AppDatabase {
+  static final AppDatabase _instance = AppDatabase._internal();
+  final Database _database;
+
+  factory AppDatabase() {
+    return _instance;
+  }
+
+  AppDatabase._internal() : _database = _initDatabase();
+
+  static Future<Database> _initDatabase() async {
+    if (kIsWeb) {
+      final factory = databaseFactoryWeb;
+      return await factory.openDatabase('translations.db');
+    } else {
+      final appDir = await getApplicationDocumentsDirectory();
+      final dbPath = join(appDir.path, 'translations.db');
+      final factory = databaseFactoryIo;
+      return await factory.openDatabase(dbPath);
+    }
+  }
+
+  Future<int> clearTranslationHistory() async {
+    final store = intMapStoreFactory.store('translations');
+    return await store.delete(_database);
+  }
+
+  Future<int> removeDuplicateTranslations() async {
+    final store = intMapStoreFactory.store('translations');
+    final allTranslations = await store.find(_database);
+
+    final Map<String, List<RecordSnapshot<int, Map<String, dynamic>>>> grouped = {};
+    for (var snapshot in allTranslations) {
+      final key = '${snapshot.value['original_text']}|${snapshot.value['translated_text']}';
+      grouped.putIfAbsent(key, () => []).add(snapshot);
+    }
+
+    int deletedCount = 0;
+    for (var group in grouped.values) {
+      if (group.length > 1) {
+        group.sort((a, b) => b.value['timestamp'].compareTo(a.value['timestamp']));
+
+        for (var i = 1; i < group.length; i++) {
+          await store.record(group[i].key).delete(_database);
+          deletedCount++;
+        }
+      }
+    }
+
+    return deletedCount;
+  }
+
+  Future<List<Map<String, dynamic>>> getTranslationHistory({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final store = intMapStoreFactory.store('translations');
+    var finder = Finder();
+
+    if (startDate != null || endDate != null) {
+      final filters = <Filter>[];
+      if (startDate != null) {
+        filters.add(Filter.greaterThan('timestamp', startDate.toIso8601String()));
+      }
+      if (endDate != null) {
+        filters.add(Filter.lessThan('timestamp', endDate.toIso8601String()));
+      }
+      finder = Finder(filter: Filter.and(filters));
+    }
+
+    final records = await store.find(_database, finder: finder);
+    return records.map((record) {
+      final data = record.value;
+      data['id'] = record.key;
+      return data;
+    }).toList();
+  }
+
+  Future<int> addTranslation(
+      String originalText,
+      String translatedText,
+      String timestamp,
+      String direction,
+      ) async {
+    final store = intMapStoreFactory.store('translations');
+    return await store.add(_database, {
+      'original_text': originalText,
+      'translated_text': translatedText,
+      'timestamp': timestamp,
+      'direction': direction,
+    });
+  }
+
+  Future<dynamic> exportAllData() async {
+    final store = intMapStoreFactory.store('translations');
+    final records = await store.find(_database);
+
+    final data = {
+      'version': 1,
+      'data': records.map((record) => record.value).toList(),
+    };
+
+    if (kIsWeb) {
+      return json.encode(data);
+    } else {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/translations_export.json');
+      await file.writeAsString(json.encode(data));
+      return file;
+    }
+  }
+
+  Future<int> importAllData(Map<String, dynamic> jsonData) async {
+    if (jsonData['version'] != 1 || jsonData['data'] == null) {
+      throw Exception('Invalid data format');
+    }
+
+    final store = intMapStoreFactory.store('translations');
+    final data = List<Map<String, dynamic>>.from(jsonData['data']);
+
+    int importedCount = 0;
+    for (var item in data) {
+      await store.add(_database, item);
+      importedCount++;
+    }
+
+    return importedCount;
+  }
+}
+
+
 class TranslationHistoryItem {
   final String originalText;
   final String translatedText;
+  final DateTime timestamp;
+  final String direction;
 
-  TranslationHistoryItem(this.originalText, this.translatedText);
+  TranslationHistoryItem(this.originalText, this.translatedText, this.timestamp, this.direction);
 }
 
 // Класс мансийской клавиатуры
@@ -226,6 +315,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Переводчик',
+      navigatorKey: navigatorKey,
       color: const Color(0xFF0A4B47),
       theme: ThemeData(
         scaffoldBackgroundColor: Color(0xFFE7E4DF),
@@ -238,10 +328,12 @@ class MyApp extends StatelessWidget {
 class TranslatePage extends StatefulWidget {
   const TranslatePage({super.key});
   @override
-  State <TranslatePage> createState() => _TranslatePageState();
+  State<TranslatePage> createState() => _TranslatePageState();
 }
 
 class _TranslatePageState extends State<TranslatePage> {
+  bool _isExporting = false;
+  bool _isImporting = false;
   final String translateApiEndpoint = "https://ethnoportal.admhmao.ru/api/machine-translates/translate";
   final TextEditingController controller1 = TextEditingController();
   final TextEditingController controller2 = TextEditingController();
@@ -258,7 +350,7 @@ class _TranslatePageState extends State<TranslatePage> {
     _focusNode.addListener(_keyboardListener);
     // Инициализация базы данных после полной загрузки Flutter
     WidgetsFlutterBinding.ensureInitialized();
-    AppDatabase.instance.database.then((db) {
+    AppDatabase().database.then((db) {
       log('База данных инициализирована');
     }).catchError((e) {
       log('Ошибка инициализации базы данных: $e');
@@ -288,11 +380,15 @@ class _TranslatePageState extends State<TranslatePage> {
     final int targetLanguage = _isSwapped ? 1 : 2;
     final String direction = '$sourceLanguage -> $targetLanguage';
 
-
     Future<void> saveTranslationHistory(String original, String translated) async {
       log('Saving translation: $original -> $translated');
       try {
-        await AppDatabase.instance.addTranslation(original, translated, DateTime.now().toIso8601String(), direction);
+        await AppDatabase().addTranslation(
+            original,
+            translated,
+            DateTime.now().toIso8601String(),
+            direction
+        );
         log('Translation saved successfully');
       } catch (e) {
         log('Error saving translation: $e');
@@ -366,6 +462,122 @@ class _TranslatePageState extends State<TranslatePage> {
   void _openMenu() {
     _scaffoldKey.currentState?.openEndDrawer();
   }
+
+
+  Future<void> _exportHistory(BuildContext context) async {
+    if (!mounted) return;
+    setState(() => _isExporting = true);
+
+    try {
+      final exportedFile = await AppDatabase().exportAllData();
+
+      if (!kIsWeb) {
+        // Для мобильных/десктоп платформ
+        final directory = await getApplicationDocumentsDirectory();
+        final savePath = await FilePicker.platform.saveFile(
+          dialogTitle: 'Экспорт данных приложения',
+          fileName: 'language_app_data.json',
+          initialDirectory: directory.path,
+        );
+
+        if (savePath != null) {
+          await exportedFile.copy(savePath);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Данные экспортированы в $savePath')),
+            );
+          }
+        }
+      } else {
+        // Для веба
+        final bytes = await exportedFile.readAsBytes();
+        final blob = web.Blob([bytes] as JSArray<web.BlobPart>, web.BlobPropertyBag(type: 'application/json'));
+        final url = web.URL.createObjectURL(blob);
+
+        final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+          ..href = url
+          ..download = 'language_app_data.json'
+          ..style.display = 'none';
+
+        web.document.body?.appendChild(anchor);
+        anchor.click();
+
+        Future.delayed(const Duration(seconds: 1), () {
+          web.document.body?.removeChild(anchor);
+          web.URL.revokeObjectURL(url);
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Данные экспортированы')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка экспорта: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
+  Future<void> _importHistory(BuildContext context) async {
+    if (!mounted) return;
+    setState(() => _isImporting = true);
+
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        String fileContent;
+
+        if (kIsWeb) {
+          fileContent = utf8.decode(result.files.first.bytes!);
+        } else {
+          final file = File(result.files.first.path!);
+          fileContent = await file.readAsString();
+        }
+
+        final Map<String, dynamic> jsonData = json.decode(fileContent);
+
+        if (jsonData['version'] == 1 && jsonData['data'] != null) {
+          final importedCount = await AppDatabase().importAllData(jsonData);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Успешно импортировано $importedCount записей')),
+            );
+            setState(() {});
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Неверный формат файла')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка импорта: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isImporting = false);
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -872,21 +1084,267 @@ class _TaskPageState extends State<TaskPage> {
 }
 
 // 5. Страница истории переводов
-class TranslationHistoryPage extends StatelessWidget {
+class TranslationHistoryPage extends StatefulWidget {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  void _openMenu() {
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
 
   TranslationHistoryPage({super.key});
 
   @override
+  State<TranslationHistoryPage> createState() => _TranslationHistoryPageState();
+}
+
+class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
+  bool _isExporting = false;
+  bool _isImporting = false;
+  bool _isClearing = false;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final DateFormat _dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+
+  // Добавленный метод для очистки истории
+  Future<void> _clearHistory(BuildContext context) async {
+    if (!mounted) return;
+    setState(() => _isClearing = true);
+
+    try {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Подтверждение'),
+          content: const Text('Вы уверены, что хотите очистить всю историю переводов?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Очистить', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await AppDatabase().clearTranslationHistory();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('История переводов очищена')),
+          );
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при очистке истории: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isClearing = false);
+      }
+    }
+  }
+
+  // Добавленный метод для удаления дубликатов
+  Future<void> _removeDuplicates(BuildContext context) async {
+    if (!mounted) return;
+    setState(() => _isClearing = true);
+
+    try {
+      final removedCount = await AppDatabase().removeDuplicateTranslations();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Удалено $removedCount дубликатов')),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при удалении дубликатов: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isClearing = false);
+      }
+    }
+  }
+  Future<void> _exportAllData(BuildContext context) async {
+    if (!mounted) return;
+    setState(() => _isExporting = true);
+
+    try {
+      final exportResult = await AppDatabase().exportAllData();
+
+      if (kIsWeb) {
+        // Handle web export
+        final jsonStr = exportResult as String;
+        final bytes = utf8.encode(jsonStr);
+        final blob = web.Blob(
+            [bytes.toJS].toJS,
+            web.BlobPropertyBag(type: 'application/json')
+        );
+        final url = web.URL.createObjectURL(blob);
+
+        final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+          ..href = url
+          ..download = 'translation_history_${DateTime.now().millisecondsSinceEpoch}.json'
+          ..style.display = 'none';
+
+        web.document.body?.appendChild(anchor);
+        anchor.click();
+
+        Future.delayed(const Duration(seconds: 1), () {
+          web.document.body?.removeChild(anchor);
+          web.URL.revokeObjectURL(url);
+        });
+      } else {
+        // Handle mobile/desktop export
+        final file = exportResult as File;
+        final savePath = await FilePicker.platform.saveFile(
+          dialogTitle: 'Экспорт истории переводов',
+          fileName: 'translation_history_${DateTime.now().millisecondsSinceEpoch}.json',
+        );
+
+        if (savePath != null) {
+          await file.copy(savePath);
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Данные успешно экспортированы')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка экспорта: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
+// Обновленный метод _importAllData в _TranslationHistoryPageState
+  Future<void> _importAllData(BuildContext context) async {
+    if (!mounted) return;
+    setState(() => _isImporting = true);
+
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        String fileContent;
+
+        if (kIsWeb) {
+          fileContent = utf8.decode(result.files.first.bytes!);
+        } else {
+          final file = File(result.files.first.path!);
+          fileContent = await file.readAsString();
+        }
+
+        final Map<String, dynamic> jsonData = json.decode(fileContent);
+
+        if (jsonData['version'] == 1 && jsonData['data'] != null) {
+          final importedCount = await AppDatabase().importAllData(jsonData);
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Успешно импортировано $importedCount записей')),
+          );
+
+          setState(() {});
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Неверный формат файла')),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка импорта: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
+    }
+  }
+
+  Future<void> _selectDateTime(BuildContext context, bool isStart) async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: isStart ? _startDate ?? DateTime.now() : _endDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: isStart ? _startTime ?? TimeOfDay.now() : _endTime ?? TimeOfDay.now(),
+      );
+
+      if (pickedTime != null) {
+        setState(() {
+          final combinedDateTime = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+
+          if (isStart) {
+            _startDate = combinedDateTime;
+            _startTime = pickedTime;
+          } else {
+            _endDate = combinedDateTime;
+            _endTime = pickedTime;
+          }
+        });
+      }
+    }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  void _openMenu() {
+    widget._scaffoldKey.currentState?.openEndDrawer();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
+      key: widget._scaffoldKey,
       appBar: AppBar(
-        title: const Text('История переводов'),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset("assets/images/logo.png"),
+        ),
+        title: const Text("История переводов"),
         backgroundColor: const Color(0xFF0A4B47),
         foregroundColor: Colors.white,
         actions: [
@@ -901,71 +1359,309 @@ class TranslationHistoryPage extends StatelessWidget {
           ),
         ],
       ),
-      body: FutureBuilder(
-        future: AppDatabase.instance.getTranslationHistory(),
-        builder: (context, AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('История переводов пуста'));
-          }
-          return ListView.builder(
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final item = snapshot.data![index];
-              return ListTile(
-                title: Text(item['original_text']),
-                subtitle: Text(item['translated_text']),
-                trailing: Text(item['direction']),
-                onTap: () {},
-              );
-            },
-          );
-        },
-      ),
-      endDrawer: _buildAppDrawer(context),
-    );
-  }
-}
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // DateTime filters row
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDateTime(context, true),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                _startDate != null
+                                    ? _dateFormat.format(_startDate!)
+                                    : 'Начальная дата и время',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDateTime(context, false),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                _endDate != null
+                                    ? _dateFormat.format(_endDate!)
+                                    : 'Конечная дата и время',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Search field
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: 'Поиск по тексту',
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = '';
+                          _searchController.clear();
+                        });
+                      },
+                    )
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.toLowerCase();
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                // Action buttons
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    _buildActionButton(
+                      onPressed: () => _exportAllData(context),
+                      isLoading: _isExporting,
+                      text: 'Экспорт',
+                      color: const Color(0xFF0A4B47),
+                    ),
+                    _buildActionButton(
+                      onPressed: () => _importAllData(context),
+                      isLoading: _isImporting,
+                      text: 'Импорт',
+                      color: const Color(0xFF0A4B47),
+                    ),
+                    _buildActionButton(
+                      onPressed: () => _removeDuplicates(context),
+                      isLoading: _isClearing,
+                      text: 'Удалить дубликаты',
+                      color: Colors.orange,
+                    ),
+                    _buildActionButton(
+                      onPressed: () => _clearHistory(context),
+                      isLoading: _isClearing,
+                      text: 'Очистить историю',
+                      color: Colors.red,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: AppDatabase().getTranslationHistory(
+                startDate: _startDate,
+                endDate: _endDate,
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-  Widget _buildAppDrawer(BuildContext context) {
-    return Drawer(
-      child: Container(
-        padding: EdgeInsets.only(top: 40),
-        decoration: BoxDecoration(color: Color(0xFFE7E4DF)),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            ListTile(
-              title: Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TranslatePage()),
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('История переводов пуста'));
+                }
+
+                // Фильтрация по поисковому запросу
+                var filteredItems = snapshot.data!.where((item) {
+                  final original = item['original_text'].toString().toLowerCase();
+                  final translated = item['translated_text'].toString().toLowerCase();
+                  return original.contains(_searchQuery) ||
+                      translated.contains(_searchQuery);
+                }).toList();
+
+                if (filteredItems.isEmpty) {
+                  return const Center(child: Text('Ничего не найдено'));
+                }
+
+                return ListView.builder(
+                  itemCount: filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final item = filteredItems[index];
+                    final dateTime = DateTime.parse(item['timestamp']);
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        title: Text(
+                          item['original_text'],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item['translated_text']),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _dateFormat.format(dateTime),
+                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
-            ListTile(
-              title: Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MainMenuPage()),
-                );
-              },
-            ),
-            ListTile(
-              title: Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TranslationHistoryPage()),
-                );
-              },
-            ),
-          ],
+          ),
+        ],
+      ),
+      endDrawer: Drawer(
+        child: Container(
+          padding: const EdgeInsets.only(top: 40),
+          decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              ListTile(
+                title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslatePage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MainMenuPage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslationHistoryPage()),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+Widget _buildActionButton({
+  required VoidCallback onPressed,
+  required bool isLoading,
+  required String text,
+  required Color color,
+}) {
+  return ElevatedButton(
+    onPressed: isLoading ? null : onPressed,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: color,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+          ),
+        Text(text),
+      ],
+    ),
+  );
+}
+
+Widget _buildAppDrawer(BuildContext context) {
+  return Drawer(
+    child: Container(
+      padding: EdgeInsets.only(top: 40),
+      decoration: BoxDecoration(color: Color(0xFFE7E4DF)),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          ListTile(
+            title: Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TranslatePage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MainMenuPage()),
+              );
+            },
+          ),
+          ListTile(
+            title: Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TranslationHistoryPage()),
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
