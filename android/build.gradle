@@ -1,10 +1,20 @@
-ext {
-    compileSdkVersion = 34
-}
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+buildscript {
+    ext.kotlin_version = '1.7.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:5.0.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 

@@ -1,0 +1,2 @@
+C:/Users/LinaM/StudioProjects/TransLearning/android/app/.cxx/RelWithDebInfo/r3t533iz/x86/CMakeFiles/edit_cache.dir
+C:/Users/LinaM/StudioProjects/TransLearning/android/app/.cxx/RelWithDebInfo/r3t533iz/x86/CMakeFiles/rebuild_cache.dir
