@@ -390,6 +390,7 @@ class AppDatabase {
     }
 
   }
+
   Future<void> _initRiddles(Database db) async {
     final riddleStore = intMapStoreFactory.store('riddles');
     final count = await riddleStore.count(db);
@@ -1197,12 +1198,6 @@ class AppDatabase {
       'points': 20,
       'order': 5,
     });
-
-    /*Future<List<Map<String, dynamic>>> getRiddles() async {
-      final String jsonString = await rootBundle.loadString('assets/riddles.json');
-      final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
-      return List<Map<String, dynamic>>.from(jsonMap['riddles']);
-    }*/
   }
 
   Future<List<Map<String, dynamic>>> getModuleLevels(int moduleId) async {
@@ -1777,7 +1772,38 @@ class MainMenuPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Главное меню')),
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset("assets/images/logo.png"),
+        ),
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final fontSize = constraints.maxWidth > 600 ? 24.0 : 20.0;
+
+            return Text(
+              "Главное меню",
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.normal,
+              ),
+            );
+          },
+        ),
+        backgroundColor: const Color(0xFF0A4B47),
+        foregroundColor: Colors.white,
+        actions: [
+          ElevatedButton(
+            onPressed: _openMenu,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0A4B47),
+              shape: const CircleBorder(),
+              padding: const EdgeInsets.all(12),
+            ),
+            child: const Icon(Icons.menu, color: Colors.white, size: 30),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -2133,6 +2159,44 @@ class _TheoryPageState extends State<TheoryPage> {
             ],
           );
         },
+      ),
+      endDrawer: Drawer(
+        child: Container(
+          padding: const EdgeInsets.only(top: 40),
+          decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              ListTile(
+                title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslatePage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MainMenuPage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslationHistoryPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2618,6 +2682,44 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
             },
           );
         },
+      ),
+      endDrawer: Drawer(
+        child: Container(
+          padding: const EdgeInsets.only(top: 40),
+          decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              ListTile(
+                title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslatePage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MainMenuPage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslationHistoryPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -3223,6 +3325,7 @@ class RiddlePage extends StatefulWidget {
     required this.riddles,
   });
 
+
   @override
   State<RiddlePage> createState() => _RiddlePageState();
 }
@@ -3231,6 +3334,7 @@ class _RiddlePageState extends State<RiddlePage> {
   String? _selectedAnswer;
   bool _answerChecked = false;
   bool _showSuccess = false;
+
 
   late final Map<String, dynamic> currentRiddle;
 
@@ -3279,7 +3383,27 @@ class _RiddlePageState extends State<RiddlePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Загадка')),
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset("assets/images/logo.png"),
+        ),
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final fontSize = constraints.maxWidth > 600 ? 24.0 : 20.0;
+
+            return Text(
+              "Загадка",
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.normal,
+              ),
+            );
+          },
+        ),
+        backgroundColor: const Color(0xFF0A4B47),
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -3324,6 +3448,44 @@ class _RiddlePageState extends State<RiddlePage> {
               child: Text(_answerChecked ? 'Следующая загадка' : 'Проверить'),
             ),
           ],
+        ),
+      ),
+      endDrawer: Drawer(
+        child: Container(
+          padding: const EdgeInsets.only(top: 40),
+          decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              ListTile(
+                title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslatePage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MainMenuPage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranslationHistoryPage()),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
