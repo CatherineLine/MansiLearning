@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:js_interop';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,8 +10,6 @@ import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'dart:convert';
-import 'package:flutter/services.dart';
 
 // Условные импорты для разных платформ
 import 'package:sembast/sembast.dart';
@@ -59,10 +56,29 @@ void _handleDrop(web.Event e) {
 }
 
 Future<Map<String, dynamic>> loadRiddles() async {
-  final String jsonString = await rootBundle.loadString('assets/riddles.json');
-  final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
-  return jsonMap;
+  try {
+    final String jsonString = await rootBundle.loadString('assets/riddles.json');
+    final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
+
+    // Безопасное преобразование
+    if (jsonMap.containsKey('riddles')) {
+      final riddles = jsonMap['riddles'];
+      if (riddles is List) {
+        return {
+          'riddles': List<Map<String, dynamic>>.from(
+              riddles.map((r) => r as Map<String, dynamic>)
+          )
+        };
+      }
+    }
+
+    throw Exception('Неверный формат riddles.json');
+  } catch (e) {
+    print('Ошибка загрузки riddles.json: $e');
+    return {'riddles': []};
+  }
 }
+
 void _handleFileLoad(web.Event e) {
   final target = e.target;
   if (target == null) return;
@@ -349,15 +365,40 @@ class AppDatabase {
 
   // Новые методы для работы с учебными материалами
   Future<void> initLearningMaterials() async {
-    final db = await _database;
-    final theoryStore = intMapStoreFactory.store('theory');
-    final tasksStore = intMapStoreFactory.store('tasks');
+    try {
+      final db = await _database;
+      final theoryStore = intMapStoreFactory.store('theory');
+      final tasksStore = intMapStoreFactory.store('tasks');
 
-    // Проверяем, есть ли уже данные
-    final theoryCount = await theoryStore.count(db);
-    if (theoryCount == 0) {
-      // Заполняем начальные данные
-      await _populateInitialData(db);
+      // Проверяем, есть ли уже данные
+      final theoryCount = await theoryStore.count(db);
+      final tasksCount = await tasksStore.count(db);
+
+      if (theoryCount == 0 || tasksCount == 0) {
+        print('Заполняем начальные данные...');
+        await _populateInitialData(db);
+        print('Начальные данные успешно добавлены');
+      } else {
+        print('Данные уже существуют: теория=$theoryCount, задания=$tasksCount');
+      }
+
+      // Инициализируем загадки отдельно
+      await _initRiddles(db);
+    } catch (e) {
+      print('Ошибка инициализации учебных материалов: $e');
+      rethrow;
+    }
+
+  }
+  Future<void> _initRiddles(Database db) async {
+    final riddleStore = intMapStoreFactory.store('riddles');
+    final count = await riddleStore.count(db);
+
+    if (count == 0) {
+      print('Добавляем загадки...');
+      /*await _populateRiddles(db);*/
+    } else {
+      print('Загадки уже существуют: $count штук');
     }
   }
 
@@ -1157,147 +1198,11 @@ class AppDatabase {
       'order': 5,
     });
 
-    Future<void> _populateRiddles(Database db) async {
-      final riddleStore = intMapStoreFactory.store('riddles');
-
-      // Проверяем, есть ли уже загадки
-      final count = await riddleStore.count(db);
-      if (count > 0) return;
-
-      // Добавляем 20 загадок
-      final List<Map<String, dynamic>> riddles = [
-        {
-          'id': 1,
-          'question': 'Рыба у него без костей, вода у него дорогая, с двух сторон железо.',
-          'options': ['Ножницы', 'Чайник', 'Лодка', 'Сковорода'],
-          'correct_answer': 'Чайник',
-        },
-        {
-          'id': 2,
-          'question': 'Живёт старик, одна его щека в небо упирается, другая в землю...',
-          'options': ['Гора', 'Дерево', 'Мост', 'Холм'],
-          'correct_answer': 'Гора',
-        },
-        {
-          'id': 3,
-          'question': 'Одна голова, две спины, пять хвостов.',
-          'options': ['Рука', 'Стул', 'Плуг', 'Конь'],
-          'correct_answer': 'Рука',
-        },
-        {
-          'id': 4,
-          'question': 'Без окон, без дверей, а живут люди в ней.',
-          'options': ['Подвал', 'Яйцо', 'Тюрьма', 'Дом'],
-          'correct_answer': 'Яйцо',
-        },
-        {
-          'id': 5,
-          'question': 'Не конь, а бежит, не лес, а шумит.',
-          'options': ['Пароход', 'Река', 'Поезд', 'Ветер'],
-          'correct_answer': 'Река',
-        },
-        {
-          'id': 6,
-          'question': 'Если ешь — не выешь, если пьёшь — не выпьешь.',
-          'options': ['Соль', 'Сахар', 'Вода', 'Завтрак'],
-          'correct_answer': 'Соль',
-        },
-        {
-          'id': 7,
-          'question': 'Стоит на крыше верх трубой, как будто хочет сесть на мчою.',
-          'options': ['Печь', 'Труба', 'Скворечник', 'Флюгер'],
-          'correct_answer': 'Печь',
-        },
-        {
-          'id': 8,
-          'question': 'Что быстрее мысли?',
-          'options': ['Ветер', 'Свет', 'Электричество', 'Никто'],
-          'correct_answer': 'Никто',
-        },
-        {
-          'id': 9,
-          'question': 'Что было завтра, а будет вчера?',
-          'options': ['Сегодня', 'Время', 'Завтра', 'Прошлое'],
-          'correct_answer': 'Сегодня',
-        },
-        {
-          'id': 10,
-          'question': 'Два братца через дорогу живут, а друг друга не видят.',
-          'options': ['Глаза', 'Уши', 'Мост', 'Пешеходный переход'],
-          'correct_answer': 'Глаза',
-        },
-        {
-          'id': 11,
-          'question': 'Что становится мокрым при сушке?',
-          'options': ['Полотенце', 'Вода', 'Воздух', 'Пол'],
-          'correct_answer': 'Полотенце',
-        },
-        {
-          'id': 12,
-          'question': 'Идёт, качается, упадёт — никому не встать.',
-          'options': ['Волна', 'Дерево', 'Тень', 'Снег'],
-          'correct_answer': 'Тень',
-        },
-        {
-          'id': 13,
-          'question': 'Кто говорит на всех языках?',
-          'options': ['Попугай', 'Переводчик', 'Эхо', 'Многознайка'],
-          'correct_answer': 'Эхо',
-        },
-        {
-          'id': 14,
-          'question': 'Что можно увидеть с закрытыми глазами?',
-          'options': ['Сон', 'Тьму', 'Мир', 'Ничего'],
-          'correct_answer': 'Сон',
-        },
-        {
-          'id': 15,
-          'question': 'На что похожа половина яблока?',
-          'options': ['На круг', 'На мяч', 'На половинку', 'На другую половинку'],
-          'correct_answer': 'На другую половинку',
-        },
-        {
-          'id': 16,
-          'question': 'Что может путешествовать по свету, оставаясь в одном месте?',
-          'options': ['Почта', 'Карта', 'Фотография', 'Место'],
-          'correct_answer': 'Почта',
-        },
-        {
-          'id': 17,
-          'question': 'Что всегда увеличивается и никогда не уменьшается?',
-          'options': ['Время', 'Цена', 'Знания', 'Голод'],
-          'correct_answer': 'Время',
-        },
-        {
-          'id': 18,
-          'question': 'Что принадлежит вам, но используется чаще другими?',
-          'options': ['Имя', 'Фамилия', 'Телефон', 'Адрес'],
-          'correct_answer': 'Имя',
-        },
-        {
-          'id': 19,
-          'question': 'Что можно сломать, даже не прикасаясь к нему?',
-          'options': ['Обещание', 'Правило', 'Сердце', 'Молчание'],
-          'correct_answer': 'Обещание',
-        },
-        {
-          'id': 20,
-          'question': 'Что становится мокрым при сушке?',
-          'options': ['Полотенце', 'Вода', 'Воздух', 'Пол'],
-          'correct_answer': 'Полотенце',
-        }
-      ];
-
-      for (var riddle in riddles) {
-        await riddleStore.add(db, riddle);
-      }
-      await _populateRiddles(db);
-    }
-    Future<List<Map<String, dynamic>>> getRiddles() async {
+    /*Future<List<Map<String, dynamic>>> getRiddles() async {
       final String jsonString = await rootBundle.loadString('assets/riddles.json');
       final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
       return List<Map<String, dynamic>>.from(jsonMap['riddles']);
-    }
+    }*/
   }
 
   Future<List<Map<String, dynamic>>> getModuleLevels(int moduleId) async {
@@ -1378,7 +1283,22 @@ class AppDatabase {
     final db = await _database;
     final store = intMapStoreFactory.store('riddles');
     final records = await store.find(db);
-    return records.map((record) => record.value).toList();
+
+    List<Map<String, dynamic>> riddles = [];
+
+    for (final record in records) {
+      final Map<String, dynamic> riddle = {};
+
+      record.value.forEach((key, value) {
+        if (key is String) {
+          riddle[key] = value;
+        } else {
+          riddle[key.toString()] = value;
+        }
+      });
+      riddles.add(riddle);
+    }
+    return riddles;
   }
 }
 
@@ -3370,7 +3290,7 @@ class _RiddlePageState extends State<RiddlePage> {
             Text(currentRiddle['question']),
             const SizedBox(height: 20),
             ...List<Widget>.from(
-              (currentRiddle['options'] as List<String>).map((option) {
+              (List<String>.from(currentRiddle['options'] ?? [])).map((option) {
                 return RadioListTile<String>(
                   title: Text(option),
                   value: option,
