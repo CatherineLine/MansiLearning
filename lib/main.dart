@@ -3391,7 +3391,6 @@ class _RiddlePageState extends State<RiddlePage> {
         title: LayoutBuilder(
           builder: (context, constraints) {
             final fontSize = constraints.maxWidth > 600 ? 24.0 : 20.0;
-
             return Text(
               "Загадка",
               style: TextStyle(
