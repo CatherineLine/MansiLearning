@@ -62,8 +62,9 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
-}
 
 flutter {
     source = "../.."
 }
+
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"

@@ -38,7 +38,7 @@ dependencies:
   sembast: ^3.4.0
   sembast_web: ^2.1.0
   intl: 0.20.2
-  file_picker: ^5.5.0
+  file_picker: ^8.0.0
   web: ^0.5.0
   js:
   js_interop:
@@ -67,6 +67,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/images/logo.png
+    - assets/riddles.json
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
