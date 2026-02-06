@@ -1,2 +1,0 @@
-C:/Users/LinaM/StudioProjects/TransLearning/android/app/.cxx/RelWithDebInfo/r3t533iz/armeabi-v7a/CMakeFiles/edit_cache.dir
-C:/Users/LinaM/StudioProjects/TransLearning/android/app/.cxx/RelWithDebInfo/r3t533iz/armeabi-v7a/CMakeFiles/rebuild_cache.dir

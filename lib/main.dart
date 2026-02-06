@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
-import 'dart:js_interop';
+/*import 'dart:js_interop';*/
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,21 +14,22 @@ import 'dart:io';
 // Условные импорты для разных платформ
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
-import 'package:sembast_web/sembast_web.dart' as sembast_web;
+import 'package:sqflite/sqflite.dart' as sqlite;
+/*import 'package:sembast_web/sembast_web.dart' as sembast_web;*/
 
 // Для веб-платформы
-import 'package:web/web.dart' as web show Blob, BlobPropertyBag, DragEvent, Event, FileReader, HTMLAnchorElement, URL, document;
-import 'package:js/js_util.dart' as js_util;
+/*import 'package:web/web.dart' as web show Blob, BlobPropertyBag, DragEvent, Event, FileReader, HTMLAnchorElement, URL, document;
+import 'package:js/js_util.dart' as js_util;*/
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (kIsWeb) {
+  /*if (kIsWeb) {
     web.document.addEventListener('dragover', _handleDragOver.toJS);
     web.document.addEventListener('drop', _handleDrop.toJS);
-  }
+  }*/
   final db = AppDatabase();
   await db.database;
   await db.initLearningMaterials();
@@ -36,7 +37,7 @@ void main() async {
   runApp(const MyApp());
 }
 
-void _handleDragOver(web.Event e) {
+/*void _handleDragOver(web.Event e) {
   js_util.callMethod(e, 'preventDefault', []);
 }
 
@@ -53,7 +54,7 @@ void _handleDrop(web.Event e) {
       js_util.callMethod(reader, 'readAsText', [file]);
     }
   }
-}
+}*/
 
 Future<Map<String, dynamic>> loadRiddles() async {
   try {
@@ -79,7 +80,7 @@ Future<Map<String, dynamic>> loadRiddles() async {
   }
 }
 
-void _handleFileLoad(web.Event e) {
+/*void _handleFileLoad(web.Event e) {
   final target = e.target;
   if (target == null) return;
 
@@ -115,7 +116,7 @@ void _handleFileLoad(web.Event e) {
   } catch (e) {
     _showError('Ошибка обработки файла: $e');
   }
-}
+}*/
 
 void _showSuccess(String message) {
   if (navigatorKey.currentContext != null && navigatorKey.currentState?.mounted == true) {
@@ -184,11 +185,23 @@ class AppDatabase {
   Future<Database> get database => _database;
 
   Future<Database> _initDatabase() async {
-    final databaseFactory = kIsWeb
-        ? sembast_web.databaseFactoryWeb
-        : databaseFactoryIo;
+    /*if (kIsWeb) {
+      return await sembast_web.databaseFactoryWeb.openDatabase('learning_app.db');
+    } else */{
+      // Для Android/iOS используем правильный путь
+      final String databasePath = await sqlite.getDatabasesPath();
+      final String path = join(databasePath, 'learning_app.db');
 
-    return await databaseFactory.openDatabase('learning_app.db');
+      print('Database path: $path');  // Для отладки
+
+      // Убедитесь, что директория существует
+      final dbDir = Directory(databasePath);
+      if (!await dbDir.exists()) {
+        await dbDir.create(recursive: true);
+      }
+
+      return await databaseFactoryIo.openDatabase(path);
+    }
   }
 
   Future<int> getUserTotalScore() async {
@@ -2823,7 +2836,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     try {
       final exportResult = await AppDatabase().exportAllData();
 
-      if (kIsWeb) {
+      /*if (kIsWeb) {
         final jsonStr = exportResult as String;
         final bytes = utf8.encode(jsonStr);
         final blob = web.Blob(
@@ -2844,7 +2857,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           web.document.body?.removeChild(anchor);
           web.URL.revokeObjectURL(url);
         });
-      } else {
+      } else */{
         final file = exportResult as File;
         final savePath = await FilePicker.platform.saveFile(
           dialogTitle: 'Экспорт истории переводов',
