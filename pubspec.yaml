@@ -49,6 +49,11 @@ dependencies:
   flutter_tts: ^3.8.5  # Добавьте эту зависимость
   shared_preferences: ^2.2.2
   url_launcher: ^6.2.5
+  syncfusion_flutter_pdf: ^24.1.41
+  pdf: ^3.10.7
+  workmanager: ^0.5.1
+  share_plus: ^7.2.1
+  #open_file: ^3.3.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
