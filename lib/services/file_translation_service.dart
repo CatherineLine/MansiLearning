@@ -44,8 +44,10 @@ class FileTranslationService {
   }
 
   /// Перевод файла
-  Future<File?> translateFile(File inputFile, {Function(String)? onProgress}) async {
+  Future<File?> translateFile(File inputFile, {Function(double)? onProgress}) async {
     _isCancelled = false;
+    progressNotifier.value = 0.0;
+
     statusNotifier.value = TranslationStatus(
       fileName: inputFile.path.split('/').last,
       status: 'Чтение файла...',
@@ -62,6 +64,8 @@ class FileTranslationService {
         status: 'Извлечено ${extractedText.length} символов. Перевод...',
         progress: 10.0,
       );
+      progressNotifier.value = 10.0;
+      onProgress?.call(0.1);
 
       // Шаг 2: Разбивка на части (если текст длинный)
       List<String> chunks = _splitTextIntoChunks(extractedText);
@@ -76,11 +80,11 @@ class FileTranslationService {
           status: 'Перевод части ${i + 1}/${chunks.length}...',
           progress: currentProgress,
         );
+        progressNotifier.value = currentProgress;
+        onProgress?.call(currentProgress / 100);  // ← ЗДЕСЬ ВСЁ ПРАВИЛЬНО (double)
 
         String translated = await _translateText(chunks[i]);
         translatedChunks.add(translated);
-
-        onProgress?.call(((i + 1) / chunks.length) as String);
       }
 
       // Шаг 3: Склеивание результата
@@ -91,6 +95,8 @@ class FileTranslationService {
         status: 'Сохранение результата...',
         progress: 95.0,
       );
+      progressNotifier.value = 95.0;
+      onProgress?.call(0.95);
 
       // Шаг 4: Сохранение переведённого файла
       File? outputFile = await _saveTranslatedFile(
@@ -105,6 +111,8 @@ class FileTranslationService {
         progress: 100.0,
         outputFile: outputFile,
       );
+      progressNotifier.value = 100.0;
+      onProgress?.call(1.0);
 
       return outputFile;
 
@@ -130,14 +138,13 @@ class FileTranslationService {
 
   /// Извлечение текста из файла
   Future<String> _extractTextFromFile(File file) async {
-    String extension = file.path.split('.').last.toLowerCase();
     String content = await file.readAsString(encoding: utf8);
     return content;
   }
 
   /// Разбивка текста на части (API имеет ограничение на размер)
   List<String> _splitTextIntoChunks(String text) {
-    const int maxChunkSize = 5000; // Максимальный размер части
+    const int maxChunkSize = 5000;
     List<String> chunks = [];
 
     for (int i = 0; i < text.length; i += maxChunkSize) {
@@ -150,6 +157,8 @@ class FileTranslationService {
 
   /// Перевод текста через API
   Future<String> _translateText(String text) async {
+    debugPrint('📤 Отправка текста (${text.length} символов): ${text.substring(0, text.length > 100 ? 100 : text.length)}...');
+
     final Map<String, dynamic> data = {
       "text": text,
       "sourceLanguage": 1, // Русский
@@ -163,15 +172,21 @@ class FileTranslationService {
         body: json.encode(data),
       ).timeout(const Duration(seconds: 30));
 
+      debugPrint('📥 Статус ответа: ${response.statusCode}');
+      debugPrint('📥 Тело ответа: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
+
       if (response.statusCode == 200) {
         String responseBody = utf8.decode(response.bodyBytes);
         final Map<String, dynamic> responseData = json.decode(responseBody);
-        return responseData['translatedText'] ?? text;
+        String translated = responseData['translatedText'] ?? text;
+        debugPrint('✅ Перевод получен (${translated.length} символов)');
+        return translated;
+      } else {
+        debugPrint('❌ Ошибка API: ${response.statusCode}');
+        return text;
       }
-
-      return text;
     } catch (e) {
-      debugPrint('Ошибка перевода: $e');
+      debugPrint('❌ Ошибка перевода: $e');
       return text;
     }
   }
@@ -183,9 +198,10 @@ class FileTranslationService {
       final fileName = originalName.replaceAll('.$extension', '_translated.$extension');
       final file = File('${directory.path}/$fileName');
       await file.writeAsString(content, encoding: utf8);
+      debugPrint('✅ Файл сохранён: ${file.path}');
       return file;
     } catch (e) {
-      debugPrint('Ошибка сохранения файла: $e');
+      debugPrint('❌ Ошибка сохранения файла: $e');
       return null;
     }
   }

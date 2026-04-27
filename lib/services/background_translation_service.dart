@@ -1,49 +1,82 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:workmanager/workmanager.dart';
 import 'file_translation_service.dart';
 
-/// Инициализация WorkManager для фоновых задач
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    switch (task) {
-      case "translateFileTask":
-        final filePath = inputData?['filePath'];
-        if (filePath != null) {
-          final file = File(filePath);
-          final service = FileTranslationService();
-          await service.translateFile(file);
-        }
-        break;
-    }
-    return Future.value(true);
-  });
-}
-
+/// Сервис для фонового перевода (без WorkManager)
 class BackgroundTranslationService {
+  static final BackgroundTranslationService _instance =
+  BackgroundTranslationService._internal();
+  factory BackgroundTranslationService() => _instance;
+  BackgroundTranslationService._internal();
+
+  bool _isRunning = false;
+  Completer<File?>? _currentTask;
+  final FileTranslationService _translationService = FileTranslationService();
+
+  // Текущий статус для отображения в UI
+  final ValueNotifier<TranslationStatus?> statusNotifier = ValueNotifier(null);
+
+  /// Инициализация (для совместимости с предыдущим кодом)
   static Future<void> init() async {
-    await Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: true, // В релизе установить false
-    );
+    debugPrint('BackgroundTranslationService initialized');
   }
 
-  /// Запуск перевода файла в фоне
-  static Future<void> startBackgroundTranslation(String filePath) async {
-    await Workmanager().registerOneOffTask(
-      "translateFileTask_${DateTime.now().millisecondsSinceEpoch}",
-      "translateFileTask",
-      inputData: {"filePath": filePath},
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-        requiresBatteryNotLow: true,
-      ),
-    );
+  /// Запуск перевода в фоне (можно свернуть приложение)
+  Future<File?> startBackgroundTranslation(File file, {
+    Function(double progress)? onProgress,
+    Function(String status)? onStatus,
+  }) async {
+    if (_isRunning) {
+      debugPrint('Перевод уже выполняется');
+      return null;
+    }
+
+    _isRunning = true;
+    _currentTask = Completer<File?>();
+
+    // Подписываемся на обновления статуса
+    _translationService.statusNotifier.addListener(_onStatusChange);
+    _translationService.progressNotifier.addListener(_onProgressChange);
+
+    // Запускаем перевод в фоне (не блокируем UI)
+    await Future.delayed(Duration.zero);
+
+    _translationService.translateFile(file, onProgress: (progress) {
+      onProgress?.call(progress as double);
+    }).then((result) {
+      _isRunning = false;
+      _currentTask?.complete(result);
+      _translationService.statusNotifier.removeListener(_onStatusChange);
+      _translationService.progressNotifier.removeListener(_onProgressChange);
+    }).catchError((e) {
+      _isRunning = false;
+      _currentTask?.completeError(e);
+    });
+
+    return _currentTask!.future;
   }
 
-  /// Остановка всех фоновых задач
-  static Future<void> cancelAllTasks() async {
-    await Workmanager().cancelAll();
+  void _onStatusChange() {
+    statusNotifier.value = _translationService.statusNotifier.value;
+  }
+
+  void _onProgressChange() {
+    // Обновление прогресса
+  }
+
+  /// Проверка, выполняется ли перевод
+  bool get isRunning => _isRunning;
+
+  /// Получение текущего статуса
+  TranslationStatus? get currentStatus => _translationService.statusNotifier.value;
+
+  /// Отмена перевода
+  void cancel() {
+    _translationService.cancelTranslation();
+    _isRunning = false;
+    if (_currentTask != null && !_currentTask!.isCompleted) {
+      _currentTask?.completeError('Отменено');
+    }
   }
 }

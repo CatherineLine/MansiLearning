@@ -134,10 +134,10 @@ class _TranslatePageState extends State<TranslatePage> {
         await _animateTextAppearance(translatedText);
 
         await AppDatabase().addTranslation(
-            text,
-            controller2.text,
-            DateTime.now().toIso8601String(),
-            direction
+            text,                    // originalText
+            controller2.text,        // translatedText
+            DateTime.now().toIso8601String(),  // timestamp
+            direction                // direction (например "1 -> 2")
         );
       } else {
         setState(() {

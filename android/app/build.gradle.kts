@@ -1,7 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
 import org.gradle.api.JavaVersion
-import org.gradle.api.Plugin
-import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
 plugins {
@@ -12,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.translearn"
-    compileSdk = 34  // или 35
+    compileSdk = 35  // ← ИЗМЕНИТЕ С 34 НА 35
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -25,8 +23,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.translearn"
-        minSdk = 21  // ← ИСПРАВЛЕНО: minSdk, а не minSdkVersion
-        targetSdk = 34
+        minSdk = 21
+        targetSdk = 35  // ← ИЗМЕНИТЕ С 34 НА 35
         versionCode = 1
         versionName = "1.0"
     }

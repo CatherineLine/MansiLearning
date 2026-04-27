@@ -32,9 +32,12 @@ class _TheoryPageState extends State<TheoryPage> {
     _tasksFuture = AppDatabase().getTasks(widget.moduleId, widget.level);
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,  // Добавить ключ
       appBar: AppBar(
         title: Text(
           '${widget.moduleTitle} - Уровень ${widget.level}',

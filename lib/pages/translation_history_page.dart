@@ -94,21 +94,22 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     setState(() => _isExporting = true);
 
     try {
-      final exportResult = await AppDatabase().exportAllData();
-      final file = exportResult as File;
+      final exportData = await AppDatabase().exportAllData();
+      final jsonString = json.encode(exportData);
+
       final savePath = await FilePicker.platform.saveFile(
         dialogTitle: 'Экспорт истории переводов',
         fileName: 'translation_history_${DateTime.now().millisecondsSinceEpoch}.json',
       );
 
       if (savePath != null) {
-        await file.copy(savePath);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Данные успешно экспортированы')),
-        );
+        final file = File(savePath);
+        await file.writeAsString(jsonString);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Данные успешно экспортированы')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -143,19 +144,12 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
 
         final Map<String, dynamic> jsonData = json.decode(fileContent);
 
-        if (jsonData['version'] == 1 && jsonData['data'] != null) {
-          final importedCount = await AppDatabase().importAllData(jsonData);
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Успешно импортировано $importedCount записей')),
-          );
-          setState(() {});
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Неверный формат файла')),
-          );
-        }
+        final importedCount = await AppDatabase().importAllData(jsonData);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Успешно импортировано $importedCount записей')),
+        );
+        setState(() {});
       }
     } catch (e) {
       if (!mounted) return;

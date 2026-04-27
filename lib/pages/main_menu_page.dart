@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/app_database.dart';
+import 'document_translation_page.dart';
 import 'module_levels_page.dart';
 import 'riddle_page.dart';
 import 'translate_page.dart';
@@ -65,6 +66,22 @@ class MainMenuPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             _buildRiddleButton(),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DocumentTranslationPage()),
+                );
+              },
+              icon: const Icon(Icons.description),
+              label: const Text('Перевод документов'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0A4B47),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+            ),
           ],
         ),
       ),
@@ -129,6 +146,8 @@ class MainMenuPage extends StatelessWidget {
       },
     );
   }
+
+
 
   Future<void> _openRiddlePage(BuildContext context, int solvedRiddles) async {
     final data = await loadRiddles();

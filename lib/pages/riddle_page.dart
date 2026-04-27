@@ -68,9 +68,12 @@ class _RiddlePageState extends State<RiddlePage> {
     }
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,  // Добавить ключ
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),

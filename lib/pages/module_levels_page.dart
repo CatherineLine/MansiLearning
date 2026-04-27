@@ -67,9 +67,12 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
     return theory != null;
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,  // Добавить ключ
       appBar: AppBar(
         title: Text(widget.moduleTitle),
         backgroundColor: const Color(0xFF0A4B47),

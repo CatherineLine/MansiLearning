@@ -7,10 +7,14 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Инициализация фонового сервиса (теперь без WorkManager)
   await BackgroundTranslationService.init();
+
   final db = AppDatabase();
   await db.database;
   await db.initLearningMaterials();
+
   runApp(const MyApp());
 }
 
