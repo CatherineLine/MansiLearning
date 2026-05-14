@@ -17,8 +17,7 @@ class RiddlePage extends StatefulWidget {
     required this.riddles,
   });
 
-  @overrid
-  e
+  @override
   State<RiddlePage> createState() => _RiddlePageState();
 }
 
