@@ -1,5 +1,5 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../models/learning_entities.dart';
 import '../models/phrasebook_entities.dart';
 import '../services/app_database.dart';
 import 'module_levels_page.dart';
@@ -7,6 +7,7 @@ import 'riddle_page.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
 import 'translation_history_page.dart';
+import '../models/learning_entities.dart';
 
 class TaskPage extends StatefulWidget {
   final int moduleId;
@@ -56,6 +57,15 @@ class _TaskPageState extends State<TaskPage> {
     }
   }
 
+  List<String> _parseOptions(String optionsJson) {
+    try {
+      final List<dynamic> decoded = jsonDecode(optionsJson);
+      return decoded.map((e) => e.toString()).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   void _checkAnswer() {
     if (_selectedAnswer == null && _selectedMultipleAnswers.isEmpty) return;
 
@@ -88,7 +98,7 @@ class _TaskPageState extends State<TaskPage> {
     } else {
       await AppDatabase.instance.saveUserProgress(UserProgress(
         userId: 1,
-        taskId: widget.tasks[_currentTaskIndex].id,
+        taskId: widget.tasks[_currentTaskIndex].id ?? 0,
         riddleId: null,
         sourceContext: 'task',
         isCompleted: true,
@@ -112,7 +122,7 @@ class _TaskPageState extends State<TaskPage> {
               moduleId: widget.moduleId,
               level: nextLevel,
               moduleTitle: widget.moduleTitle,
-              tasks: nextLevelTasks.map((t) => t.toMap()).toList(),
+              tasks: nextLevelTasks.map((t) => t.toMap()).toList() as List<Map<String, dynamic>>,
               initialScore: _score,
             ),
           ),
@@ -143,7 +153,7 @@ class _TaskPageState extends State<TaskPage> {
                     builder: (context) => RiddlePage(
                       riddleIndex: riddleNumber,
                       userScore: _score,
-                      riddles: riddlesList.map((r) => r.toMap()).toList(),
+                      riddles: riddlesList.map((r) => r.toMap()).toList() as List<Map<String, dynamic>>,
                     ),
                   ),
                 );
@@ -156,6 +166,7 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Widget _buildQuestionWidget(Task task) {
+    final options = _parseOptions(task.optionsJson);
     switch (task.type ?? 'single') {
       case 'true_false':
         return Column(
@@ -181,7 +192,7 @@ class _TaskPageState extends State<TaskPage> {
           children: [
             Text(task.questionText, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
-            ...(task.options as List).map((option) => CheckboxListTile(
+            ...options.map((option) => CheckboxListTile(
               title: Text(option),
               value: _selectedMultipleAnswers.contains(option),
               onChanged: _answerChecked
@@ -203,7 +214,7 @@ class _TaskPageState extends State<TaskPage> {
           children: [
             Text(task.questionText, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
-            ...(task.options as List).map((option) => RadioListTile<String>(
+            ...options.map((option) => RadioListTile<String>(
               title: Text(option),
               value: option,
               groupValue: _selectedAnswer,

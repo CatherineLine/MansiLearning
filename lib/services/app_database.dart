@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
-// Импортируем модели, которые мы создали ранее
 import '../models/user.dart';
 import '../models/media_asset.dart';
 import '../models/learning_entities.dart';
