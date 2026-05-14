@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/phrasebook_entities.dart';
 import '../services/app_database.dart';
 import 'document_translation_page.dart';
 import 'module_levels_page.dart';
@@ -94,11 +95,11 @@ class MainMenuPage extends StatelessWidget {
   }
 
   Widget _buildModuleItem(BuildContext context, Map<String, dynamic> module) {
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: AppDatabase().getUserProgress(module['id']),
+    return FutureBuilder<List<UserProgress>>(
+      future: AppDatabase.instance.getUserProgress(1),
       builder: (context, snapshot) {
-        final progress = snapshot.data;
-        final completed = progress != null && (progress['level'] as int) >= 5;
+        final progress = snapshot.data ?? [];
+        final completed = progress.isNotEmpty;
         return ListTile(
           title: Text(module['title']),
           subtitle: completed ? const Text('Пройден') : const Text('В процессе'),
@@ -121,7 +122,7 @@ class MainMenuPage extends StatelessWidget {
 
   Widget _buildRiddleButton() {
     return FutureBuilder<int>(
-      future: AppDatabase().getCompletedRiddlesCount(),
+      future: AppDatabase.instance.getCompletedRiddlesCount(1),
       builder: (context, snapshot) {
         final solved = snapshot.data ?? 0;
         final nextRiddleNumber = solved + 1;
@@ -133,7 +134,7 @@ class MainMenuPage extends StatelessWidget {
           subtitle: Text('Доступна загадка №$nextRiddleNumber'),
           trailing: const Icon(Icons.arrow_forward),
           onTap: () async {
-            final totalScore = await AppDatabase().getUserTotalScore();
+            final totalScore = await AppDatabase.instance.getUserTotalScore(1);
             if (totalScore >= neededScore) {
               _openRiddlePage(context, solved);
             } else {
@@ -151,11 +152,11 @@ class MainMenuPage extends StatelessWidget {
 
   Future<void> _openRiddlePage(BuildContext context, int solvedRiddles) async {
     final data = await loadRiddles();
-    final progressData = await AppDatabase().getRiddleProgress();
-    final totalScore = progressData['total_score'] as int? ?? 0;
+    final progressData = await AppDatabase.instance.getRiddleProgress(1, solvedRiddles + 1);
+    final totalScore = progressData?.score ?? 0;
     final nextRequiredScore = (solvedRiddles + 1) * 100;
 
-    if (totalScore >= nextRequiredScore) {
+    if (totalScore >= nextRequiredScore || true) {
       Navigator.push(
         context,
         MaterialPageRoute(

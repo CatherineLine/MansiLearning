@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import '../models/translation_entities.dart';
 import '../services/app_database.dart';
 import '../widgets/custom_buttons.dart';
 import 'translate_page.dart';
@@ -47,7 +48,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       );
 
       if (confirm == true) {
-        await AppDatabase().clearTranslationHistory();
+        await AppDatabase.instance.clearTranslationHistory();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('История переводов очищена')),
@@ -71,10 +72,10 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     setState(() => _isClearing = true);
 
     try {
-      final removedCount = await AppDatabase().removeDuplicateTranslations();
+      await AppDatabase.instance.removeDuplicateTranslations();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Удалено $removedCount дубликатов')),
+          const SnackBar(content: Text('Дубликаты удалены')),
         );
         setState(() {});
       }
@@ -94,7 +95,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     setState(() => _isExporting = true);
 
     try {
-      final exportData = await AppDatabase().exportAllData();
+      final exportData = await AppDatabase.instance.exportAllData();
       final jsonString = json.encode(exportData);
 
       final savePath = await FilePicker.platform.saveFile(
@@ -143,11 +144,10 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
         }
 
         final Map<String, dynamic> jsonData = json.decode(fileContent);
-
-        final importedCount = await AppDatabase().importAllData(jsonData);
+        await AppDatabase.instance.importAllData(jsonData);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Успешно импортировано $importedCount записей')),
+          const SnackBar(content: Text('Данные успешно импортированы')),
         );
         setState(() {});
       }
@@ -349,8 +349,8 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: AppDatabase().getTranslationHistory(
+            child: FutureBuilder<List<Translation>>(
+              future: AppDatabase.instance.getTranslationHistory(
                 startDate: _startDate,
                 endDate: _endDate,
                 searchQuery: _searchQuery.isEmpty ? null : _searchQuery,

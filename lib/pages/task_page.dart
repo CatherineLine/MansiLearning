@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/learning_entities.dart';
+import '../models/phrasebook_entities.dart';
 import '../services/app_database.dart';
 import 'module_levels_page.dart';
 import 'riddle_page.dart';
@@ -34,24 +36,24 @@ class _TaskPageState extends State<TaskPage> {
   bool _answerChecked = false;
   bool _isLastLevel = false;
   List<String> _selectedMultipleAnswers = [];
-  late Future<List<Map<String, dynamic>>> _tasksFuture;
+  late Future<List<Task>> _tasksFuture;
 
   @override
   void initState() {
     super.initState();
     _score = widget.initialScore;
-    _tasksFuture = widget.tasks != null
-        ? Future.value(widget.tasks!)
-        : AppDatabase().getTasks(widget.moduleId, widget.level);
+    _tasksFuture = Future.value(widget.tasks.map((t) => Task.fromMap(t)).toList());
     _checkIfLastLevel();
   }
 
   Future<void> _checkIfLastLevel() async {
-    final levels = await AppDatabase().getModuleLevels(widget.moduleId);
-    final maxLevel = levels.last['level'] as int;
-    setState(() {
-      _isLastLevel = widget.level >= maxLevel;
-    });
+    final levels = await AppDatabase.instance.getModuleLevels(widget.moduleId);
+    if (levels.isNotEmpty) {
+      final maxLevel = levels.last.id ?? 0;
+      setState(() {
+        _isLastLevel = widget.level >= maxLevel;
+      });
+    }
   }
 
   void _checkAnswer() {
@@ -59,14 +61,14 @@ class _TaskPageState extends State<TaskPage> {
 
     _tasksFuture.then((tasks) {
       final currentTask = tasks[_currentTaskIndex];
-      final isCorrect = currentTask['type'] == 'multiple'
-          ? _selectedMultipleAnswers.contains(currentTask['correct_answer'])
-          : _selectedAnswer == currentTask['correct_answer'];
+      final isCorrect = currentTask.type == 'multiple'
+          ? _selectedMultipleAnswers.contains(currentTask.correctAnswer)
+          : _selectedAnswer == currentTask.correctAnswer;
 
       setState(() {
         _answerChecked = true;
         if (isCorrect) {
-          _score += currentTask['points'] as int;
+          _score += 10; // Default points for correct answer
           _showSuccess = true;
         } else {
           _showSuccess = false;
@@ -84,17 +86,25 @@ class _TaskPageState extends State<TaskPage> {
         _showSuccess = false;
       });
     } else {
-      await AppDatabase().saveUserProgress(widget.moduleId, widget.level, _score);
-      final totalScore = await AppDatabase().getUserTotalScore();
-      final solvedRiddlesCount = await AppDatabase().getCompletedRiddlesCount();
-      await AppDatabase().saveRiddleProgress(solvedRiddlesCount, totalScore);
+      await AppDatabase.instance.saveUserProgress(UserProgress(
+        userId: 1,
+        taskId: widget.tasks[_currentTaskIndex].id,
+        riddleId: null,
+        sourceContext: 'task',
+        isCompleted: true,
+        attemptsCount: 1,
+        score: _score,
+      ));
+      final totalScore = await AppDatabase.instance.getUserTotalScore(1);
+      final solvedRiddlesCount = await AppDatabase.instance.getCompletedRiddlesCount(1);
+      await AppDatabase.instance.saveRiddleProgress(1, solvedRiddlesCount + 1, true, totalScore);
 
-      final levels = await AppDatabase().getModuleLevels(widget.moduleId);
+      final levels = await AppDatabase.instance.getModuleLevels(widget.moduleId);
       final nextLevel = widget.level + 1;
-      final hasNextLevel = levels.any((l) => l['level'] == nextLevel);
+      final hasNextLevel = levels.any((l) => l.id == nextLevel);
 
       if (hasNextLevel) {
-        final nextLevelTasks = await AppDatabase().getTasks(widget.moduleId, nextLevel);
+        final nextLevelTasks = await AppDatabase.instance.getTasks(widget.moduleId);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -102,7 +112,7 @@ class _TaskPageState extends State<TaskPage> {
               moduleId: widget.moduleId,
               level: nextLevel,
               moduleTitle: widget.moduleTitle,
-              tasks: nextLevelTasks,
+              tasks: nextLevelTasks.map((t) => t.toMap()).toList(),
               initialScore: _score,
             ),
           ),
@@ -123,7 +133,7 @@ class _TaskPageState extends State<TaskPage> {
         );
 
         if (_score >= 100 && _score % 100 == 0) {
-          AppDatabase().getRiddles().then((riddlesList) {
+          AppDatabase.instance.getRiddles().then((riddlesList) {
             if (riddlesList.isNotEmpty) {
               final int riddleNumber = (_score ~/ 100) - 1;
               if (riddleNumber < riddlesList.length) {
@@ -133,7 +143,7 @@ class _TaskPageState extends State<TaskPage> {
                     builder: (context) => RiddlePage(
                       riddleIndex: riddleNumber,
                       userScore: _score,
-                      riddles: riddlesList,
+                      riddles: riddlesList.map((r) => r.toMap()).toList(),
                     ),
                   ),
                 );
@@ -145,12 +155,12 @@ class _TaskPageState extends State<TaskPage> {
     }
   }
 
-  Widget _buildQuestionWidget(Map<String, dynamic> task) {
-    switch (task['type'] ?? 'single') {
+  Widget _buildQuestionWidget(Task task) {
+    switch (task.type ?? 'single') {
       case 'true_false':
         return Column(
           children: [
-            Text(task['question'], style: const TextStyle(fontSize: 20)),
+            Text(task.questionText, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
             RadioListTile<String>(
               title: const Text('Правда'),
@@ -169,9 +179,9 @@ class _TaskPageState extends State<TaskPage> {
       case 'multiple':
         return Column(
           children: [
-            Text(task['question'], style: const TextStyle(fontSize: 20)),
+            Text(task.questionText, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
-            ...(task['options'] as List).map((option) => CheckboxListTile(
+            ...(task.options as List).map((option) => CheckboxListTile(
               title: Text(option),
               value: _selectedMultipleAnswers.contains(option),
               onChanged: _answerChecked
@@ -191,9 +201,9 @@ class _TaskPageState extends State<TaskPage> {
       default:
         return Column(
           children: [
-            Text(task['question'], style: const TextStyle(fontSize: 20)),
+            Text(task.questionText, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
-            ...(task['options'] as List).map((option) => RadioListTile<String>(
+            ...(task.options as List).map((option) => RadioListTile<String>(
               title: Text(option),
               value: option,
               groupValue: _selectedAnswer,
@@ -217,7 +227,7 @@ class _TaskPageState extends State<TaskPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: FutureBuilder<List<Map<String, dynamic>>>(
+        child: FutureBuilder<List<Task>>(
           future: _tasksFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {

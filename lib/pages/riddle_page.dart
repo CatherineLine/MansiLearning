@@ -38,7 +38,7 @@ class _RiddlePageState extends State<RiddlePage> {
       _answerChecked = true;
       if (_selectedAnswer == currentRiddle['correct_answer']) {
         _showSuccess = true;
-        AppDatabase().saveRiddleProgress(widget.riddleIndex + 1, widget.userScore + 100);
+        AppDatabase.instance.saveRiddleProgress(1, widget.riddleIndex + 1, true, widget.userScore + 100);
       }
     });
   }

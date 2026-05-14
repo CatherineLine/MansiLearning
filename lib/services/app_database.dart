@@ -206,7 +206,7 @@ class AppDatabase {
     return maps.map((map) => Task.fromMap(map)).toList();
   }
 
-  Future<List<Theory>> getTheory(int levelId) async {
+  Future<List<Theory>> getTheory(int levelId, int level) async {
     final db = await database;
     final maps = await db.query('theory', where: 'level_id = ?', whereArgs: [levelId]);
     return maps.map((map) => Theory.fromMap(map)).toList();

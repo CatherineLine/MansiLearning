@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../main.dart';
+import '../models/translation_entities.dart';
 import '../services/app_database.dart';
 import '../services/android_tts_service.dart';
 import '../widgets/custom_buttons.dart';
@@ -46,9 +47,8 @@ class _TranslatePageState extends State<TranslatePage> {
   @override
   void initState() {
     super.initState();
-    AndroidTTSService.init();
     _focusNode.addListener(_keyboardListener);
-    AppDatabase().database.then((db) {
+    AppDatabase.instance.database.then((db) {
       print('База данных инициализирована');
     }).catchError((e) {
       print('Ошибка инициализации базы данных: $e');
@@ -133,12 +133,14 @@ class _TranslatePageState extends State<TranslatePage> {
         final translatedText = responseData['translatedText'] ?? 'Ошибка: Перевод не найден';
         await _animateTextAppearance(translatedText);
 
-        await AppDatabase().addTranslation(
-            text,                    // originalText
-            controller2.text,        // translatedText
-            DateTime.now().toIso8601String(),  // timestamp
-            direction                // direction (например "1 -> 2")
-        );
+        await AppDatabase.instance.addTranslation(Translation(
+          sessionId: 1,
+          sourceText: text,
+          targetText: controller2.text,
+          sourceLang: _isSwapped ? 'mansi' : 'ru',
+          targetLang: _isSwapped ? 'ru' : 'mansi',
+          isFavorite: false,
+        ));
       } else {
         setState(() {
           controller2.text = 'Ошибка при запросе данных';
