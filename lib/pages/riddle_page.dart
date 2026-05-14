@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../services/app_database.dart';
 import 'translate_page.dart';
@@ -16,7 +17,8 @@ class RiddlePage extends StatefulWidget {
     required this.riddles,
   });
 
-  @override
+  @overrid
+  e
   State<RiddlePage> createState() => _RiddlePageState();
 }
 
