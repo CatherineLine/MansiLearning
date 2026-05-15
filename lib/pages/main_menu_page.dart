@@ -22,11 +22,14 @@ class MainMenuPage extends StatelessWidget {
     {'id': 10, 'title': 'Предложения наличия и местонахождения'},
   ];
 
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
   MainMenuPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: scaffoldKey,
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -46,7 +49,7 @@ class MainMenuPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white, size: 30),
-            onPressed: () => _openMenu(context),
+            onPressed: () => scaffoldKey.currentState?.openEndDrawer(),
           ),
         ],
       ),

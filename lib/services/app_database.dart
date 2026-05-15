@@ -69,7 +69,6 @@ class AppDatabase {
     }
   }
 
-  // ✅ Исправлено: добавлен await для db.query(), так как он возвращает Future
   Future<List<Module>> getModules() async {
     final db = await database;
     return (await db.query('modules', orderBy: 'order_index')).map((m) => Module.fromMap(m)).toList();
@@ -164,7 +163,10 @@ class AppDatabase {
       }
       if (data['translations'] != null) {
         for (var item in (data['translations'] as List).cast<Map<String, dynamic>>()) {
-          await txn.insert('translations', item, conflictAlgorithm: ConflictAlgorithm.ignore);
+          // ✅ Гарантируем session_id
+          final withSession = Map<String, dynamic>.from(item);
+          withSession['session_id'] ??= 1;
+          await txn.insert('translations', withSession, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
       if (data['progress'] != null) {

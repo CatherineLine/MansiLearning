@@ -16,6 +16,7 @@ class TranslationHistoryPage extends StatefulWidget {
 }
 
 class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isExporting = false, _isImporting = false, _isClearing = false;
   DateTime? _startDate, _endDate;
   TimeOfDay? _startTime, _endTime;
@@ -93,12 +94,15 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         leading: Padding(padding: const EdgeInsets.all(8.0), child: Image.asset("assets/images/logo.png")),
         title: LayoutBuilder(builder: (ctx, c) => Text("История переводов", style: TextStyle(fontSize: c.maxWidth > 600 ? 24.0 : 20.0))),
         backgroundColor: const Color(0xFF0A4B47),
         foregroundColor: Colors.white,
-        actions: [IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openEndDrawer())],
+        actions: [IconButton(icon: const Icon(Icons.menu),
+        onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+        )],
       ),
       body: Column(
         children: [
@@ -122,33 +126,52 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           )),
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: AppDatabase.instance.getTranslationHistory(startDate: _startDate, endDate: _endDate, searchQuery: _searchQuery.isEmpty ? null : _searchQuery),
+              future: AppDatabase.instance.getTranslationHistory(
+                startDate: _startDate,
+                endDate: _endDate,
+                searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+              ),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                if (snapshot.hasError) return Center(child: Text('Ошибка: ${snapshot.error}'));
-                if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('История пуста'));
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Ошибка: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('История переводов пуста'));
+                }
                 return ListView.builder(
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
                     final item = snapshot.data![index];
-                    // ✅ Безопасный доступ к полям через Map
                     final original = item['source_text'] as String? ?? '';
                     final translated = item['target_text'] as String? ?? '';
                     final sLang = item['source_lang'] as String? ?? 'ru';
                     final tLang = item['target_lang'] as String? ?? 'mansi';
 
-                    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: ListTile(
-                      title: Text(original, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(translated), const SizedBox(height: 4),
-                        Row(children: [
-                          const Icon(Icons.schedule, size: 14, color: Colors.grey), const SizedBox(width: 4),
-                          Text('Нет даты', style: const TextStyle(color: Colors.grey, fontSize: 12)), // timestamp нет в схеме БД
-                          const Spacer(),
-                          Text('$sLang → $tLang', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                        ]),
-                      ]),
-                    ));
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        title: Text(original, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(translated),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Text('Нет даты', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                const Spacer(),
+                                Text('$sLang → $tLang', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
                 );
               },
@@ -156,7 +179,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           ),
         ],
       ),
-      endDrawer: Drawer(
+        endDrawer: Drawer(
         child: Container(padding: const EdgeInsets.only(top: 40), decoration: const BoxDecoration(color: Color(0xFFE7E4DF)), child: ListView(padding: EdgeInsets.zero, children: [
           ListTile(title: const Text('Переводчик', style: TextStyle(fontSize: 20)), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const TranslatePage()))),
           ListTile(title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => MainMenuPage()))),
