@@ -1,13 +1,15 @@
 ```
-# Dependencies
+# Build artifacts
+build/
 .dart_tool/
-.build/
 .packages
 
-# Logs and temp files
+# Dependencies
+.pub/
+pubspec.lock
+
+# Logs
 *.log
-*.tmp
-*.swp
 
 # Environment
 .env
@@ -15,11 +17,10 @@
 *.env.*
 
 # IDE
-.idea/
 .vscode/
-*.iml
-*.ipr
-*.iws
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
@@ -28,18 +29,7 @@ Thumbs.db
 # Coverage
 coverage/
 htmlcov/
-
-# Build outputs
-build/
-dist/
-bin/
-
-# Cache
-.cache/
-.mypy_cache/
-.pytest_cache/
-.gradle/
-target/
+.coverage
 
 # Compressed files
 *.zip
@@ -50,4 +40,18 @@ target/
 *.xz
 *.7z
 *.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```

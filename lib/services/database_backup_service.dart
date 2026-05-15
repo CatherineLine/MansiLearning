@@ -1,13 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
 import 'app_database.dart';
-import '../models/user.dart';
-import '../models/media_asset.dart';
-import '../models/learning_entities.dart';
-import '../models/translation_entities.dart';
-import '../models/phrasebook_entities.dart';
 
 class DatabaseBackupService {
   final AppDatabase _db = AppDatabase.instance;

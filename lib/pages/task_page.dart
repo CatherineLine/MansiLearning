@@ -15,7 +15,6 @@ class TaskPage extends StatefulWidget {
   final String moduleTitle;
   final List<Map<String, dynamic>> tasks;
   final int initialScore;
-
   const TaskPage({
     super.key,
     required this.moduleId,
@@ -36,7 +35,7 @@ class _TaskPageState extends State<TaskPage> {
   String? _selectedAnswer;
   bool _answerChecked = false;
   bool _isLastLevel = false;
-  List<String> _selectedMultipleAnswers = [];
+  final List<String> _selectedMultipleAnswers = [];
   late Future<List<Task>> _tasksFuture;
 
   @override
@@ -50,6 +49,7 @@ class _TaskPageState extends State<TaskPage> {
   Future<void> _checkIfLastLevel() async {
     final levels = await AppDatabase.instance.getModuleLevels(widget.moduleId);
     if (levels.isNotEmpty) {
+      // Исправлено: levels.last - это объект Level, доступ через точку
       final maxLevel = levels.last.id ?? 0;
       setState(() {
         _isLastLevel = widget.level >= maxLevel;
@@ -68,17 +68,15 @@ class _TaskPageState extends State<TaskPage> {
 
   void _checkAnswer() {
     if (_selectedAnswer == null && _selectedMultipleAnswers.isEmpty) return;
-
     _tasksFuture.then((tasks) {
       final currentTask = tasks[_currentTaskIndex];
       final isCorrect = currentTask.type == 'multiple'
           ? _selectedMultipleAnswers.contains(currentTask.correctAnswer)
           : _selectedAnswer == currentTask.correctAnswer;
-
       setState(() {
         _answerChecked = true;
         if (isCorrect) {
-          _score += 10; // Default points for correct answer
+          _score += 10;
           _showSuccess = true;
         } else {
           _showSuccess = false;
@@ -96,9 +94,10 @@ class _TaskPageState extends State<TaskPage> {
         _showSuccess = false;
       });
     } else {
+      // Исправлено: tasks хранятся как Map, доступ через []
       await AppDatabase.instance.saveUserProgress(UserProgress(
         userId: 1,
-        taskId: widget.tasks[_currentTaskIndex].id ?? 0,
+        taskId: widget.tasks[_currentTaskIndex]['id'] ?? 0,
         riddleId: null,
         sourceContext: 'task',
         isCompleted: true,
@@ -108,11 +107,9 @@ class _TaskPageState extends State<TaskPage> {
       final totalScore = await AppDatabase.instance.getUserTotalScore(1);
       final solvedRiddlesCount = await AppDatabase.instance.getCompletedRiddlesCount(1);
       await AppDatabase.instance.saveRiddleProgress(1, solvedRiddlesCount + 1, true, totalScore);
-
       final levels = await AppDatabase.instance.getModuleLevels(widget.moduleId);
       final nextLevel = widget.level + 1;
       final hasNextLevel = levels.any((l) => l.id == nextLevel);
-
       if (hasNextLevel) {
         final nextLevelTasks = await AppDatabase.instance.getTasks(widget.moduleId);
         Navigator.pushReplacement(
@@ -122,7 +119,7 @@ class _TaskPageState extends State<TaskPage> {
               moduleId: widget.moduleId,
               level: nextLevel,
               moduleTitle: widget.moduleTitle,
-              tasks: nextLevelTasks.map((t) => t.toMap()).toList() as List<Map<String, dynamic>>,
+              tasks: nextLevelTasks.map((t) => t.toMap()).toList(),
               initialScore: _score,
             ),
           ),
@@ -131,7 +128,6 @@ class _TaskPageState extends State<TaskPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Модуль завершён!')),
         );
-
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -141,7 +137,6 @@ class _TaskPageState extends State<TaskPage> {
             ),
           ),
         );
-
         if (_score >= 100 && _score % 100 == 0) {
           AppDatabase.instance.getRiddles().then((riddlesList) {
             if (riddlesList.isNotEmpty) {
@@ -153,7 +148,7 @@ class _TaskPageState extends State<TaskPage> {
                     builder: (context) => RiddlePage(
                       riddleIndex: riddleNumber,
                       userScore: _score,
-                      riddles: riddlesList.map((r) => r.toMap()).toList() as List<Map<String, dynamic>>,
+                      riddles: riddlesList.map((r) => r.toMap()).toList(),
                     ),
                   ),
                 );
@@ -167,7 +162,7 @@ class _TaskPageState extends State<TaskPage> {
 
   Widget _buildQuestionWidget(Task task) {
     final options = _parseOptions(task.optionsJson);
-    switch (task.type ?? 'single') {
+    switch (task.type) { // Убрано ?? 'single'
       case 'true_false':
         return Column(
           children: [
@@ -230,7 +225,7 @@ class _TaskPageState extends State<TaskPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,  // Добавить ключ
+      key: _scaffoldKey,
       appBar: AppBar(
         title: Text('${widget.moduleTitle} - Уровень ${widget.level}'),
         backgroundColor: const Color(0xFF0A4B47),
@@ -250,10 +245,8 @@ class _TaskPageState extends State<TaskPage> {
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text('Задания не найдены'));
             }
-
             final tasks = snapshot.data!;
             final currentTask = tasks[_currentTaskIndex];
-
             return Column(
               children: [
                 Expanded(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/learning_entities.dart';
-import '../models/phrasebook_entities.dart';
 import '../services/app_database.dart';
 import 'theory_page.dart';
 import 'task_page.dart';
@@ -11,7 +10,6 @@ import 'translation_history_page.dart';
 class ModuleLevelsPage extends StatefulWidget {
   final int moduleId;
   final String moduleTitle;
-
   const ModuleLevelsPage({
     super.key,
     required this.moduleId,
@@ -24,7 +22,7 @@ class ModuleLevelsPage extends StatefulWidget {
 
 class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
   late Future<List<Level>> levelsFuture;
-  late Future<List<UserProgress>> userProgressFuture;
+  late Future<List> userProgressFuture;
 
   @override
   void initState() {
@@ -35,7 +33,6 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
 
   Future<void> _startLevel(BuildContext context, int level) async {
     final hasTheory = await _hasTheoryForLevel(widget.moduleId, level);
-
     if (hasTheory) {
       Navigator.push(
         context,
@@ -74,7 +71,7 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,  // Добавить ключ
+      key: _scaffoldKey,
       appBar: AppBar(
         title: Text(widget.moduleTitle),
         backgroundColor: const Color(0xFF0A4B47),
@@ -89,15 +86,12 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
           if (snapshot.hasError) {
             return Center(child: Text('Ошибка загрузки: ${snapshot.error}'));
           }
-
           final levels = snapshot.data ?? [];
-
-          return FutureBuilder<List<UserProgress>>(
+          return FutureBuilder<List>(
             future: userProgressFuture,
             builder: (context, progressSnapshot) {
               final progressList = progressSnapshot.data ?? [];
               final maxUnlockedLevel = progressList.isNotEmpty ? progressList.length : 0;
-
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: levels.length,
@@ -105,7 +99,6 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
                   final level = levels[index];
                   final levelNumber = level.id ?? 0;
                   final isUnlocked = levelNumber <= maxUnlockedLevel + 1;
-
                   return Card(
                     elevation: 4,
                     margin: const EdgeInsets.symmetric(vertical: 8),

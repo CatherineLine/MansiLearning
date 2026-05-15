@@ -1,8 +1,6 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/phrasebook_entities.dart';
 import '../services/app_database.dart';
 import 'document_translation_page.dart';
 import 'module_levels_page.dart';
@@ -95,7 +93,7 @@ class MainMenuPage extends StatelessWidget {
   }
 
   Widget _buildModuleItem(BuildContext context, Map<String, dynamic> module) {
-    return FutureBuilder<List<UserProgress>>(
+    return FutureBuilder<List>(
       future: AppDatabase.instance.getUserProgress(1),
       builder: (context, snapshot) {
         final progress = snapshot.data ?? [];
@@ -127,7 +125,6 @@ class MainMenuPage extends StatelessWidget {
         final solved = snapshot.data ?? 0;
         final nextRiddleNumber = solved + 1;
         final neededScore = nextRiddleNumber * 100;
-
         return ListTile(
           tileColor: Colors.green[100],
           title: const Text('Решить загадку'),
@@ -148,14 +145,11 @@ class MainMenuPage extends StatelessWidget {
     );
   }
 
-
-
   Future<void> _openRiddlePage(BuildContext context, int solvedRiddles) async {
     final data = await loadRiddles();
     final progressData = await AppDatabase.instance.getRiddleProgress(1, solvedRiddles + 1);
     final totalScore = progressData?.score ?? 0;
     final nextRequiredScore = (solvedRiddles + 1) * 100;
-
     if (totalScore >= nextRequiredScore || true) {
       Navigator.push(
         context,
@@ -166,10 +160,6 @@ class MainMenuPage extends StatelessWidget {
             riddles: data['riddles'],
           ),
         ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Нужно ещё $nextRequiredScore очков')),
       );
     }
   }
@@ -205,7 +195,6 @@ class MainMenuPage extends StatelessWidget {
   }
 }
 
-// Вспомогательная функция для загрузки загадок (можно вынести в utils)
 Future<Map<String, dynamic>> loadRiddles() async {
   try {
     final String jsonString = await rootBundle.loadString('assets/riddles.json');

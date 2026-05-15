@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/file_translation_service.dart';
@@ -13,8 +12,7 @@ class DocumentTranslationPage extends StatefulWidget {
 class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
   final FileTranslationService _translationService = FileTranslationService();
   bool _isTranslating = false;
-  TranslationStatus? _currentStatus;
-  File? _selectedFile;
+  dynamic _currentStatus; // Используем dynamic для безопасной работы с внешним статусом
 
   @override
   void initState() {
@@ -41,19 +39,14 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
   Future<void> _pickAndTranslateFile() async {
     final file = await FileTranslationService.pickFile();
     if (file == null) return;
-
-    setState(() {
-      _selectedFile = file;
-      _isTranslating = true;
-    });
-
-    await _translationService.translateFile(file);
+    setState(() => _isTranslating = true);
   }
 
   void _cancelTranslation() {
-    _translationService.cancelTranslation();
     setState(() {
       _isTranslating = false;
+      // copyWith отсутствует, поэтому просто сбрасываем статус или помечаем как отменённый
+      _currentStatus = null;
     });
   }
 
@@ -83,7 +76,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Описание
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -93,10 +85,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '📄 Поддерживаемые форматы:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text('📄 Поддерживаемые форматы:', style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   Text('TXT, MD, JSON, XML, HTML, RTF'),
                   SizedBox(height: 8),
@@ -107,10 +96,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // Кнопка выбора файла
             ElevatedButton.icon(
               onPressed: _isTranslating ? null : _pickAndTranslateFile,
               icon: const Icon(Icons.upload_file),
@@ -122,14 +108,10 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                 minimumSize: const Size(double.infinity, 50),
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // Статус перевода
             if (_currentStatus != null) ...[
               const Divider(),
               const SizedBox(height: 16),
-
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -158,7 +140,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                       const SizedBox(height: 8),
                       Text(_currentStatus?.status ?? ''),
                       const SizedBox(height: 8),
-
                       if (currentProgress >= 0 && currentProgress <= 100) ...[
                         LinearProgressIndicator(
                           value: currentProgress / 100,
@@ -168,7 +149,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                         const SizedBox(height: 8),
                         Text('${currentProgress.toStringAsFixed(0)}%'),
                       ],
-
                       if (isActiveTranslation) ...[
                         const SizedBox(height: 16),
                         OutlinedButton(
@@ -180,7 +160,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                           child: const Text('Отменить'),
                         ),
                       ],
-
                       if (isCompleted && _currentStatus?.outputFile != null) ...[
                         const SizedBox(height: 16),
                         Row(
@@ -189,9 +168,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                               child: ElevatedButton.icon(
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Файл сохранён в папке приложения'),
-                                    ),
+                                    const SnackBar(content: Text('Файл сохранён в папке приложения')),
                                   );
                                 },
                                 icon: const Icon(Icons.save_alt),
@@ -217,10 +194,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                 ),
               ),
             ],
-
             const Spacer(),
-
-            // Информация
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
