@@ -87,7 +87,7 @@ class MainMenuPage extends StatelessWidget {
           ],
         ),
       ),
-      endDrawer: const AppDrawer(activeSection: AppDrawerSection.learning),
+      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.learning),
     );
   }
 
@@ -127,20 +127,27 @@ class MainMenuPage extends StatelessWidget {
         final solved = snapshot.data ?? 0;
         final nextRiddleNumber = solved + 1;
         final neededScore = nextRiddleNumber * 100;
-        return ListTile(
-          tileColor: Colors.green[100],
-          title: const Text('Решить загадку'),
-          subtitle: Text('Доступна загадка №$nextRiddleNumber'),
-          trailing: const Icon(Icons.arrow_forward),
-          onTap: () async {
-            final totalScore = await AppDatabase.instance.getUserTotalScore(1);
-            if (totalScore >= neededScore) {
-              _openRiddlePage(context, solved);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Нужно ещё $neededScore очков')),
-              );
-            }
+
+        return FutureBuilder<int>(
+          future: AppDatabase.instance.getUserTotalScore(1),
+          builder: (context, scoreSnapshot) {
+            final totalScore = scoreSnapshot.data ?? 0;
+
+            return ListTile(
+              tileColor: Colors.green[100],
+              title: const Text('Решить загадку'),
+              subtitle: Text('Загадка №$nextRiddleNumber (доступно при $neededScore очках)'),
+              trailing: const Icon(Icons.arrow_forward),
+              onTap: () async {
+                if (totalScore >= neededScore) {
+                  _openRiddlePage(context, solved);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Нужно ещё ${neededScore - totalScore} очков (сейчас: $totalScore)')),
+                  );
+                }
+              },
+            );
           },
         );
       },

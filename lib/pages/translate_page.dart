@@ -222,7 +222,7 @@ class _TranslatePageState extends State<TranslatePage> {
             ),
         ],
       ),
-      endDrawer: const AppDrawer(activeSection: AppDrawerSection.learning),
+      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.translator),
     );
   }
 

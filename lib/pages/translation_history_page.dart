@@ -53,14 +53,37 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     if (!mounted) return;
     setState(() => _isExporting = true);
     try {
-      final data = await AppDatabase.instance.exportAllData();
-      final savePath = await FilePicker.platform.saveFile(dialogTitle: 'Экспорт', fileName: 'history_${DateTime.now().millisecondsSinceEpoch}.json');
+      final exportData = await AppDatabase.instance.exportAllData();
+      final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
+
+      final now = DateTime.now();
+      final fileName = 'translation_history_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}.json';
+
+      final savePath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Экспорт истории переводов',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
       if (savePath != null) {
-        await File(savePath).writeAsString(json.encode(data));
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Экспорт завершён')));
+        final file = File(savePath);
+        await file.writeAsString(jsonString);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Данные успешно экспортированы')),
+          );
+        }
       }
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e'))); }
-    finally { if (mounted) setState(() => _isExporting = false); }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка экспорта: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 
   Future<void> _importAllData(BuildContext context) async {
@@ -144,25 +167,35 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
                     final item = snapshot.data![index];
-                    final original = item['source_text'] as String? ?? '';
-                    final translated = item['target_text'] as String? ?? '';
+                    final createdAtStr = item['created_at'] as String?;
+                    final originalText = item['source_text'] as String? ?? '';
+                    final translatedText = item['target_text'] as String? ?? '';
                     final sLang = item['source_lang'] as String? ?? 'ru';
                     final tLang = item['target_lang'] as String? ?? 'mansi';
 
+                    DateTime? parsedDate;
+                    if (createdAtStr != null && createdAtStr.isNotEmpty) {
+                      try {
+                        parsedDate = DateTime.parse(createdAtStr);
+                      } catch (_) {}
+                    }
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: ListTile(
-                        title: Text(original, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(originalText, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(translated),
+                            Text(translatedText),
                             const SizedBox(height: 4),
                             Row(
                               children: [
                                 const Icon(Icons.schedule, size: 14, color: Colors.grey),
                                 const SizedBox(width: 4),
-                                Text('Нет даты', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                Text(
+                                  parsedDate != null ? _dateFormat.format(parsedDate) : 'Нет даты',
+                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                ),
                                 const Spacer(),
                                 Text('$sLang → $tLang', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                               ],
@@ -178,7 +211,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           ),
         ],
       ),
-        endDrawer: const AppDrawer(activeSection: AppDrawerSection.translator),
+      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.history),
     );
   }
 }
