@@ -5,6 +5,7 @@ class Translation {
   final String translatedText;
   final String sourceLanguage;
   final String targetLanguage;
+  final DateTime createdAt;
   final bool isFavorite;
 
   Translation({
@@ -14,8 +15,9 @@ class Translation {
     required this.translatedText,
     required this.sourceLanguage,
     required this.targetLanguage,
+    DateTime? createdAt,
     this.isFavorite = false,
-  });
+  }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() => {
     'id': id,
@@ -27,6 +29,7 @@ class Translation {
     'is_favorite': isFavorite ? 1 : 0,
     'created_at': createdAt.toIso8601String(),
   };
+
   factory Translation.fromMap(Map<String, dynamic> map) => Translation(
     id: map['id'],
     sessionId: map['session_id'],

@@ -65,9 +65,13 @@ class AppDrawer extends StatelessWidget {
                         title: Text(module.title, style: const TextStyle(fontSize: 16)),
                         leading: const Icon(Icons.book, size: 18),
                         onTap: () {
-                          Navigator.pop(context); // Закрыть drawer
+                          if (module.id == null) return; // ✅ Защита от null
+                          Navigator.pop(context);
                           Navigator.push(context, MaterialPageRoute(
-                            builder: (context) => ModuleLevelsPage(moduleId: module.id, moduleTitle: module.title),
+                            builder: (context) => ModuleLevelsPage(
+                              moduleId: module.id!, // ✅ Force unwrap после проверки
+                              moduleTitle: module.title,
+                            ),
                           ));
                         },
                       )).toList(),

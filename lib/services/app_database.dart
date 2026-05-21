@@ -22,7 +22,7 @@ class AppDatabase {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 4, // ✅ Увеличили версию для миграции
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -53,7 +53,6 @@ class AppDatabase {
     // 4. Translations
     await db.execute('''CREATE TABLE translation_sessions (id $idType, user_id $integerType, session_type $textType, started_at $textType, status $textType, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE)''');
 
-    // ✅ Исправлено: добавлены session_id (NOT NULL) и created_at
     await db.execute('''CREATE TABLE translations (
       id $idType, 
       session_id $integerType, 
@@ -79,7 +78,6 @@ class AppDatabase {
       await db.execute('''CREATE TABLE IF NOT EXISTS riddles (id INTEGER PRIMARY KEY AUTOINCREMENT, question_text TEXT NOT NULL, answer_text TEXT NOT NULL, hint_text TEXT, difficulty_level TEXT, category TEXT)''');
       try { await db.execute('ALTER TABLE user_progress ADD COLUMN riddle_id INTEGER'); } catch (_) {}
     }
-    // ✅ Миграция для версии 4: добавляем created_at в translations
     if (oldVersion < 4) {
       try {
         await db.execute('ALTER TABLE translations ADD COLUMN created_at TEXT');
@@ -96,12 +94,10 @@ class AppDatabase {
       await db.insert('levels', {'module_id': 1, 'title': 'Уровень 1: Приветствия', 'difficulty': 'easy'});
       await db.insert('tasks', {'level_id': 1, 'question_text': 'Как переводится "Здравствуйте"?', 'type': 'choice', 'correct_answer': 'Кёинва', 'options_json': jsonEncode(['Кёинва', 'Пасяиба', 'Лань'])});
       await db.insert('riddles', {'question_text': 'Зимой и летом одним цветом?', 'answer_text': 'Ель (Нёр)', 'difficulty_level': 'easy', 'category': 'nature'});
-      // ✅ Создаём сессию по умолчанию для переводов
       await db.insert('translation_sessions', {'id': 1, 'user_id': 1, 'session_type': 'default', 'started_at': DateTime.now().toIso8601String(), 'status': 'active'});
     }
   }
 
-  // === LEARNING METHODS ===
   Future<List<Module>> getModules() async {
     final db = await database;
     return (await db.query('modules', orderBy: 'order_index')).map((m) => Module.fromMap(m)).toList();
@@ -142,14 +138,20 @@ class AppDatabase {
 
   Future<int> getCompletedRiddlesCount(int userId) async {
     final db = await database;
-    var result = await db.rawQuery('SELECT COUNT(*) as count FROM user_progress WHERE user_id = ? AND source_context = "riddle" AND is_completed = 1', [userId]);
-    return Sqflite.firstIntValue(result[0]['count']) ?? 0;
+    var result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM user_progress WHERE user_id = ? AND source_context = "riddle" AND is_completed = 1',
+        [userId]
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<int> getUserTotalScore(int userId) async {
     final db = await database;
-    var result = await db.rawQuery('SELECT SUM(score) as total FROM user_progress WHERE user_id = ?', [userId]);
-    return Sqflite.firstIntValue(result[0]['total']) ?? 0;
+    var result = await db.rawQuery(
+        'SELECT SUM(score) as total FROM user_progress WHERE user_id = ?',
+        [userId]
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<pb.UserProgress?> getRiddleProgress(int userId, int riddleId) async {
@@ -173,10 +175,8 @@ class AppDatabase {
     return await db.rawInsert('INSERT INTO user_progress (user_id, riddle_id, source_context, is_completed, attempts_count, score, last_attempt) VALUES (?, ?, ?, ?, ?, ?, ?)', [userId, riddleId, 'riddle', isCompleted ? 1 : 0, 1, score, DateTime.now().toIso8601String()]);
   }
 
-  // === TRANSLATION METHODS ===
   Future<int> addTranslation(te.Translation translation) async {
     final db = await database;
-    // ✅ Гарантируем session_id и created_at
     final map = translation.toMap();
     map['session_id'] ??= 1;
     map['created_at'] ??= DateTime.now().toIso8601String();
@@ -185,7 +185,6 @@ class AppDatabase {
 
   Future<List<Map<String, dynamic>>> getTranslationHistory({DateTime? startDate, DateTime? endDate, String? searchQuery}) async {
     final db = await database;
-    // ✅ Сортируем по created_at DESC для правильного порядка
     String orderBy = 'created_at DESC';
     if (startDate != null || endDate != null || searchQuery != null) {
       final whereParts = <String>[];
@@ -226,35 +225,20 @@ class AppDatabase {
     final db = await database;
     await db.transaction((txn) async {
       if (data['users'] != null) {
-        for (var item in (data['users'] as List).cast<Map<String, dynamic>>()) {
+        for (var item in List<Map<String, dynamic>>.from(data['users'])) {
           await txn.insert('users', item, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
       if (data['translations'] != null) {
-        for (var item in (data['translations'] as List).cast<Map<String, dynamic>>()) {
+        for (var item in List<Map<String, dynamic>>.from(data['translations'])) {
           final map = Map<String, dynamic>.from(item);
-          map['session_id'] ??= 1; // ✅ Гарантируем session_id
+          map['session_id'] ??= 1;
           await txn.insert('translations', map, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
       if (data['progress'] != null) {
-        for (var item in (data['progress'] as List).cast<Map<String, dynamic>>()) {
+        for (var item in List<Map<String, dynamic>>.from(data['progress'])) {
           await txn.insert('user_progress', item, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-      }
-      if (data['modules'] != null) {
-        for (var item in (data['modules'] as List).cast<Map<String, dynamic>>()) {
-          await txn.insert('modules', item, conflictAlgorithm: ConflictAlgorithm.ignore);
-        }
-      }
-      if (data['levels'] != null) {
-        for (var item in (data['levels'] as List).cast<Map<String, dynamic>>()) {
-          await txn.insert('levels', item, conflictAlgorithm: ConflictAlgorithm.ignore);
-        }
-      }
-      if (data['tasks'] != null) {
-        for (var item in (data['tasks'] as List).cast<Map<String, dynamic>>()) {
-          await txn.insert('tasks', item, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
     });
