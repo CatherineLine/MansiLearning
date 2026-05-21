@@ -1,111 +1,183 @@
-class TranslationSession {
-  final int? id;
-  final int userId;
-  final String sessionType;
-  final DateTime startedAt;
-  final String status;
-
-  TranslationSession({
-    this.id,
-    required this.userId,
-    required this.sessionType,
-    DateTime? startedAt,
-    this.status = 'active',
-  }) : startedAt = startedAt ?? DateTime.now();
-
-  Map<String, dynamic> toMap() => {
-    'id': id,
-    'user_id': userId,
-    'session_type': sessionType,
-    'started_at': startedAt.toIso8601String(),
-    'status': status,
-  };
-
-  factory TranslationSession.fromMap(Map<String, dynamic> map) => TranslationSession(
-    id: map['id'],
-    userId: map['user_id'],
-    sessionType: map['session_type'],
-    startedAt: DateTime.parse(map['started_at']),
-    status: map['status'],
-  );
-}
-
 class Translation {
   final int? id;
-  final int sessionId;
-  final String sourceText;
-  final String targetText;
-  final String sourceLang;
-  final String targetLang;
+  final int? sessionId;
+  final String originalText;
+  final String translatedText;
+  final String sourceLanguage;
+  final String targetLanguage;
+  final DateTime createdAt;
   final bool isFavorite;
 
   Translation({
     this.id,
-    required this.sessionId,
-    required this.sourceText,
-    required this.targetText,
-    required this.sourceLang,
-    required this.targetLang,
+    this.sessionId,
+    required this.originalText,
+    required this.translatedText,
+    required this.sourceLanguage,
+    required this.targetLanguage,
+    DateTime? createdAt,
     this.isFavorite = false,
-  });
+  }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() => {
     'id': id,
-    'session_id': sessionId,
-    'source_text': sourceText,
-    'target_text': targetText,
-    'source_lang': sourceLang,
-    'target_lang': targetLang,
+    'session_id': sessionId ?? 1,
+    'source_text': originalText,
+    'target_text': translatedText,
+    'source_lang': sourceLanguage,
+    'target_lang': targetLanguage,
     'is_favorite': isFavorite ? 1 : 0,
+    'created_at': createdAt.toIso8601String(),
   };
 
   factory Translation.fromMap(Map<String, dynamic> map) => Translation(
     id: map['id'],
     sessionId: map['session_id'],
-    sourceText: map['source_text'],
-    targetText: map['target_text'],
-    sourceLang: map['source_lang'],
-    targetLang: map['target_lang'],
+    originalText: map['source_text'] ?? '',
+    translatedText: map['target_text'] ?? '',
+    sourceLanguage: map['source_lang'] ?? 'ru',
+    targetLanguage: map['target_lang'] ?? 'mansi',
+    createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
     isFavorite: map['is_favorite'] == 1,
   );
 }
 
-class Document {
+class PhraseCategory {
   final int? id;
-  final int sessionId;
-  final String originalFilePath;
-  final String? translatedFilePath;
-  final String fileFormat;
-  final String status;
-  final DateTime uploadedAt;
+  final String name;
+  final String iconResource;
 
-  Document({
-    this.id,
-    required this.sessionId,
-    required this.originalFilePath,
-    this.translatedFilePath,
-    required this.fileFormat,
-    this.status = 'pending',
-    DateTime? uploadedAt,
-  }) : uploadedAt = uploadedAt ?? DateTime.now();
+  PhraseCategory({this.id, required this.name, required this.iconResource});
 
   Map<String, dynamic> toMap() => {
     'id': id,
-    'session_id': sessionId,
-    'original_file_path': originalFilePath,
-    'translated_file_path': translatedFilePath,
-    'file_format': fileFormat,
-    'status': status,
-    'uploaded_at': uploadedAt.toIso8601String(),
+    'name': name,
+    'icon_resource': iconResource,
   };
 
-  factory Document.fromMap(Map<String, dynamic> map) => Document(
+  factory PhraseCategory.fromMap(Map<String, dynamic> map) => PhraseCategory(
     id: map['id'],
-    sessionId: map['session_id'],
-    originalFilePath: map['original_file_path'],
-    translatedFilePath: map['translated_file_path'],
-    fileFormat: map['file_format'],
-    status: map['status'],
-    uploadedAt: DateTime.parse(map['uploaded_at']),
+    name: map['name'],
+    iconResource: map['icon_resource'],
+  );
+}
+
+class Phrase {
+  final int? id;
+  final int categoryId;
+  final int? mediaId;
+  final String textMansi;
+  final String textRussian;
+  final String? transcription;
+
+  Phrase({
+    this.id,
+    required this.categoryId,
+    this.mediaId,
+    required this.textMansi,
+    required this.textRussian,
+    this.transcription,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'category_id': categoryId,
+    'media_id': mediaId,
+    'text_mansi': textMansi,
+    'text_russian': textRussian,
+    'transcription': transcription,
+  };
+
+  factory Phrase.fromMap(Map<String, dynamic> map) => Phrase(
+    id: map['id'],
+    categoryId: map['category_id'],
+    mediaId: map['media_id'],
+    textMansi: map['text_mansi'],
+    textRussian: map['text_russian'],
+    transcription: map['transcription'],
+  );
+}
+
+class UserPhrasebook {
+  final int userId;
+  final int phraseId;
+  final bool isFavorite;
+  final int repetitionCount;
+  final DateTime? learnedAt;
+
+  UserPhrasebook({
+    required this.userId,
+    required this.phraseId,
+    this.isFavorite = false,
+    this.repetitionCount = 0,
+    this.learnedAt,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'user_id': userId,
+    'phrase_id': phraseId,
+    'is_favorite': isFavorite ? 1 : 0,
+    'repetition_count': repetitionCount,
+    'learned_at': learnedAt?.toIso8601String(),
+  };
+
+  factory UserPhrasebook.fromMap(Map<String, dynamic> map) => UserPhrasebook(
+    userId: map['user_id'],
+    phraseId: map['phrase_id'],
+    isFavorite: map['is_favorite'] == 1,
+    repetitionCount: map['repetition_count'] ?? 0,
+    learnedAt: map['learned_at'] != null ? DateTime.parse(map['learned_at']) : null,
+  );
+}
+
+class UserProgress {
+  final int? id;
+  final int userId;
+  final int? taskId;
+  final int? phraseId;
+  final int? riddleId;
+  final String sourceContext;
+  final bool isCompleted;
+  final int attemptsCount;
+  final int score;
+  final DateTime lastAttempt;
+
+  UserProgress({
+    this.id,
+    required this.userId,
+    this.taskId,
+    this.phraseId,
+    this.riddleId,
+    required this.sourceContext,
+    this.isCompleted = false,
+    this.attemptsCount = 0,
+    this.score = 0,
+    DateTime? lastAttempt,
+  }) : lastAttempt = lastAttempt ?? DateTime.now();
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'user_id': userId,
+    'task_id': taskId,
+    'phrase_id': phraseId,
+    'riddle_id': riddleId,
+    'source_context': sourceContext,
+    'is_completed': isCompleted ? 1 : 0,
+    'attempts_count': attemptsCount,
+    'score': score,
+    'last_attempt': lastAttempt.toIso8601String(),
+  };
+
+  factory UserProgress.fromMap(Map<String, dynamic> map) => UserProgress(
+    id: map['id'],
+    userId: map['user_id'],
+    taskId: map['task_id'],
+    phraseId: map['phrase_id'],
+    riddleId: map['riddle_id'],
+    sourceContext: map['source_context'],
+    isCompleted: map['is_completed'] == 1,
+    attemptsCount: map['attempts_count'] ?? 0,
+    score: map['score'] ?? 0,
+    lastAttempt: DateTime.parse(map['last_attempt']),
   );
 }

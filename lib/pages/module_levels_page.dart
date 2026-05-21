@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
+import '../models/learning_entities.dart';
 import '../services/app_database.dart';
 import 'theory_page.dart';
 import 'task_page.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
-import 'translation_history_page.dart';
 
 class ModuleLevelsPage extends StatefulWidget {
   final int moduleId;
   final String moduleTitle;
-
   const ModuleLevelsPage({
     super.key,
     required this.moduleId,
@@ -21,19 +20,18 @@ class ModuleLevelsPage extends StatefulWidget {
 }
 
 class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
-  late Future<List<Map<String, dynamic>>> levelsFuture;
-  late Future<Map<String, dynamic>?> userProgressFuture;
+  late Future<List<Level>> levelsFuture;
+  late Future<List> userProgressFuture;
 
   @override
   void initState() {
     super.initState();
-    levelsFuture = AppDatabase().getModuleLevels(widget.moduleId);
-    userProgressFuture = AppDatabase().getUserProgress(widget.moduleId);
+    levelsFuture = AppDatabase.instance.getModuleLevels(widget.moduleId);
+    userProgressFuture = AppDatabase.instance.getUserProgress(1);
   }
 
   Future<void> _startLevel(BuildContext context, int level) async {
     final hasTheory = await _hasTheoryForLevel(widget.moduleId, level);
-
     if (hasTheory) {
       Navigator.push(
         context,
@@ -46,7 +44,7 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
         ),
       );
     } else {
-      final tasks = await AppDatabase().getTasks(widget.moduleId, level);
+      final tasks = await AppDatabase.instance.getTasks(widget.moduleId);
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -54,7 +52,7 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
             moduleId: widget.moduleId,
             level: level,
             moduleTitle: widget.moduleTitle,
-            tasks: tasks,
+            tasks: tasks.map((t) => t.toMap()).toList(),
             initialScore: 0,
           ),
         ),
@@ -63,8 +61,8 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
   }
 
   Future<bool> _hasTheoryForLevel(int moduleId, int level) async {
-    final theory = await AppDatabase().getTheory(moduleId, level);
-    return theory != null;
+    final theory = await AppDatabase.instance.getTheory(moduleId, level);
+    return theory.isNotEmpty;
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -72,13 +70,13 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,  // Добавить ключ
+      key: _scaffoldKey,
       appBar: AppBar(
         title: Text(widget.moduleTitle),
         backgroundColor: const Color(0xFF0A4B47),
         foregroundColor: Colors.white,
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: FutureBuilder<List<Level>>(
         future: levelsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -87,22 +85,19 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
           if (snapshot.hasError) {
             return Center(child: Text('Ошибка загрузки: ${snapshot.error}'));
           }
-
           final levels = snapshot.data ?? [];
-
-          return FutureBuilder<Map<String, dynamic>?>(
+          return FutureBuilder<List>(
             future: userProgressFuture,
             builder: (context, progressSnapshot) {
-              final maxUnlockedLevel = progressSnapshot.data?['level'] ?? 0;
-
+              final progressList = progressSnapshot.data ?? [];
+              final maxUnlockedLevel = progressList.isNotEmpty ? progressList.length : 0;
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: levels.length,
                 itemBuilder: (context, index) {
                   final level = levels[index];
-                  final levelNumber = level['level'] as int;
+                  final levelNumber = level.id ?? 0;
                   final isUnlocked = levelNumber <= maxUnlockedLevel + 1;
-
                   return Card(
                     elevation: 4,
                     margin: const EdgeInsets.symmetric(vertical: 8),
@@ -136,21 +131,17 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
           children: [
             ListTile(
               title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage()));
-              },
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
             ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey), // ✅ РАЗДЕЛИТЕЛЬ
             ListTile(
               title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage()));
-              },
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
             ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey), // ✅ РАЗДЕЛИТЕЛЬ
             ListTile(
               title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => TranslationHistoryPage()));
-              },
+              onTap: () {},
             ),
           ],
         ),

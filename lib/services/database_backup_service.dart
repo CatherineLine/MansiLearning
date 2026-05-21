@@ -1,13 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
 import 'app_database.dart';
-import '../models/user.dart';
-import '../models/media_asset.dart';
-import '../models/learning_entities.dart';
-import '../models/translation_entities.dart';
-import '../models/phrasebook_entities.dart';
 
 class DatabaseBackupService {
   final AppDatabase _db = AppDatabase.instance;
@@ -107,35 +102,61 @@ class DatabaseBackupService {
           await txn.execute('PRAGMA foreign_keys = ON');
         }
 
-        // Вставка данных в порядке зависимостей (от родителей к детям)
-
         // 1. Базовые справочники и пользователи
-        for (var item in data['users']) await txn.insert('users', item);
-        for (var item in data['media_assets']) await txn.insert('media_assets', item);
-        for (var item in data['modules']) await txn.insert('modules', item);
-        for (var item in data['phrase_categories']) await txn.insert('phrase_categories', item);
+        for (var item in data['users']) {
+          await txn.insert('users', item);
+        }
+        for (var item in data['media_assets']) {
+          await txn.insert('media_assets', item);
+        }
+        for (var item in data['modules']) {
+          await txn.insert('modules', item);
+        }
+        for (var item in data['phrase_categories']) {
+          await txn.insert('phrase_categories', item);
+        }
 
         // 2. Зависимые от модулей и категорий
-        for (var item in data['levels']) await txn.insert('levels', item);
-        for (var item in data['phrases']) await txn.insert('phrases', item);
+        for (var item in data['levels']) {
+          await txn.insert('levels', item);
+        }
+        for (var item in data['phrases']) {
+          await txn.insert('phrases', item);
+        }
 
         // 3. Контент (теория, задания)
-        for (var item in data['theory']) await txn.insert('theory', item);
-        for (var item in data['tasks']) await txn.insert('tasks', item);
+        for (var item in data['theory']) {
+          await txn.insert('theory', item);
+        }
+        for (var item in data['tasks']) {
+          await txn.insert('tasks', item);
+        }
 
         // 4. Переводы и сессии
-        for (var item in data['translation_sessions']) await txn.insert('translation_sessions', item);
-        for (var item in data['translations']) await txn.insert('translations', item);
-        for (var item in data['documents']) await txn.insert('documents', item);
+        for (var item in data['translation_sessions']) {
+          await txn.insert('translation_sessions', item);
+        }
+        for (var item in data['translations']) {
+          await txn.insert('translations', item);
+        }
+        for (var item in data['documents']) {
+          await txn.insert('documents', item);
+        }
 
         // 5. Пользовательские данные (прогресс, избранное)
-        for (var item in data['user_phrasebook']) await txn.insert('user_phrasebook', item);
-        for (var item in data['user_progress']) await txn.insert('user_progress', item);
+        for (var item in data['user_phrasebook']) {
+          await txn.insert('user_phrasebook', item);
+        }
+        for (var item in data['user_progress']) {
+          await txn.insert('user_progress', item);
+        }
       });
 
       return true;
     } catch (e) {
-      print('Ошибка импорта базы данных: $e');
+      if (kDebugMode) {
+        print('Ошибка импорта базы данных: $e');
+      }
       return false;
     }
   }

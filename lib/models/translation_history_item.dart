@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class TranslationHistoryItem {
   final String originalText;
   final String translatedText;

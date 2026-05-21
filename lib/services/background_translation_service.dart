@@ -43,7 +43,7 @@ class BackgroundTranslationService {
     await Future.delayed(Duration.zero);
 
     _translationService.translateFile(file, onProgress: (progress) {
-      onProgress?.call(progress as double);
+      onProgress?.call(progress);
     }).then((result) {
       _isRunning = false;
       _currentTask?.complete(result);

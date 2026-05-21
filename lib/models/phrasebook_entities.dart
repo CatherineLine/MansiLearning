@@ -91,6 +91,7 @@ class UserProgress {
   final int userId;
   final int? taskId;
   final int? phraseId;
+  final int? riddleId;
   final String sourceContext;
   final bool isCompleted;
   final int attemptsCount;
@@ -102,6 +103,7 @@ class UserProgress {
     required this.userId,
     this.taskId,
     this.phraseId,
+    this.riddleId,
     required this.sourceContext,
     this.isCompleted = false,
     this.attemptsCount = 0,
@@ -114,6 +116,7 @@ class UserProgress {
     'user_id': userId,
     'task_id': taskId,
     'phrase_id': phraseId,
+    'riddle_id': riddleId,
     'source_context': sourceContext,
     'is_completed': isCompleted ? 1 : 0,
     'attempts_count': attemptsCount,
@@ -126,6 +129,7 @@ class UserProgress {
     userId: map['user_id'],
     taskId: map['task_id'],
     phraseId: map['phrase_id'],
+    riddleId: map['riddle_id'],
     sourceContext: map['source_context'],
     isCompleted: map['is_completed'] == 1,
     attemptsCount: map['attempts_count'] ?? 0,

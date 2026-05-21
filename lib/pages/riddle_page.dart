@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/app_database.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
-import 'translation_history_page.dart';
 
 class RiddlePage extends StatefulWidget {
   final int riddleIndex;
@@ -38,7 +37,7 @@ class _RiddlePageState extends State<RiddlePage> {
       _answerChecked = true;
       if (_selectedAnswer == currentRiddle['correct_answer']) {
         _showSuccess = true;
-        AppDatabase().saveRiddleProgress(widget.riddleIndex + 1, widget.userScore + 100);
+        AppDatabase.instance.saveRiddleProgress(1, widget.riddleIndex + 1, true, widget.userScore + 100);
       }
     });
   }
@@ -146,13 +145,15 @@ class _RiddlePageState extends State<RiddlePage> {
               title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
             ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
               title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
             ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
               title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TranslationHistoryPage())),
+              onTap: () {},
             ),
           ],
         ),
