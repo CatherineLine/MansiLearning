@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/custom_buttons.dart';
@@ -49,38 +52,126 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     finally { if (mounted) setState(() => _isClearing = false); }
   }
 
-  Future<void> _exportAllData(BuildContext context) async {
+  // Способ 2: Экспорт в видимую папку Downloads (с адаптивным дизайном)
+  Future<void> _exportToDocuments(BuildContext context) async {
     if (!mounted) return;
     setState(() => _isExporting = true);
+
     try {
       final exportData = await AppDatabase.instance.exportAllData();
       final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
-      final now = DateTime.now();
-      final fileName = 'mansi_history_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}.json';
-      final savePath = await FilePicker.platform.saveFile(
-        dialogTitle: 'Экспорт истории переводов',
-        fileName: fileName,
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-      if (savePath == null) {
-        setState(() => _isExporting = false);
-        return;
-      }
+
       if (jsonString.isEmpty) {
         throw Exception('Нет данных для экспорта');
       }
-      final file = File(savePath);
+
+      final now = DateTime.now();
+      final fileName = 'mansi_backup_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}.json';
+
+      //  Попытка сохранить в публичную папку Downloads
+      Directory targetDir;
+      try {
+        targetDir = Directory('/storage/emulated/0/Download');
+        if (!await targetDir.exists()) {
+          await targetDir.create(recursive: true);
+        }
+      } catch (_) {
+        // 🛡️ Fallback: если Android заблокировал прямой доступ, используем внешнюю папку приложения
+        targetDir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
+      }
+
+      final filePath = '${targetDir.path}/$fileName';
+      final file = File(filePath);
       await file.writeAsString(jsonString);
+
+      // 🎨 Красивое диалоговое окно в стиле приложения
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Данные успешно экспортированы')),
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: const Color(0xFFE7E4DF),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: const Color(0xFF0A4B47)),
+                const SizedBox(width: 8),
+                const Text('Файл сохранён!', style: TextStyle(color: Color(0xFF0A4B47))),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Путь к файлу:', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: SelectableText(
+                    filePath,
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.black87),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        filePath.contains('Download')
+                            ? 'Файл находится в папке "Загрузки" вашего телефона.'
+                            : 'Файл сохранён в папку Android/data/com.example.translearn/files/',
+                        style: const TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: filePath));
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Row(children: [Icon(Icons.check, color: Colors.white, size: 18), SizedBox(width: 8), Text('Путь скопирован')]),
+                      backgroundColor: const Color(0xFF0A4B47),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Копировать путь'),
+                style: TextButton.styleFrom(foregroundColor: const Color(0xFF0A4B47)),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A4B47),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                child: const Text('Закрыть'),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка экспорта: $e')),
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red[700]),
         );
       }
       debugPrint('Export error: $e');
@@ -141,12 +232,45 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
               const SizedBox(height: 16),
               TextField(controller: _searchController, decoration: InputDecoration(labelText: 'Поиск по тексту', prefixIcon: const Icon(Icons.search), border: const OutlineInputBorder(), suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () { setState(() { _searchQuery = ''; _searchController.clear(); }); }) : null), onChanged: (v) => setState(() => _searchQuery = v.toLowerCase())),
               const SizedBox(height: 8),
-              Wrap(spacing: 4, runSpacing: 4, alignment: WrapAlignment.center, children: [
-                ActionButton(onPressed: () => _exportAllData(context), isLoading: _isExporting, text: 'Экспорт', color: const Color(0xFF0A4B47), icon: Icons.upload),
-                ActionButton(onPressed: () => _importAllData(context), isLoading: _isImporting, text: 'Импорт', color: const Color(0xFF0A4B47), icon: Icons.download),
-                ActionButton(onPressed: () => _removeDuplicates(context), isLoading: _isClearing, text: 'Дубликаты', color: Colors.orange, icon: Icons.clean_hands),
-                ActionButton(onPressed: () => _clearHistory(context), isLoading: _isClearing, text: 'Очистить', color: Colors.red, icon: Icons.delete),
-              ]),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  // Кнопка Экспорта
+                  ActionButton(
+                    onPressed: (_isExporting ? null : () => _exportToDocuments(context)) ?? () {},
+                    isLoading: false,
+                    text: 'Экспорт',
+                    color: const Color(0xFF0A4B47),
+                    icon: Icons.folder,
+                  ),
+                  // Импорт
+                  ActionButton(
+                    onPressed: (_isImporting ? null : () => _importAllData(context)) ?? () {},
+                    isLoading: _isImporting,
+                    text: 'Импорт',
+                    color: const Color(0xFF0A4B47),
+                    icon: Icons.download,
+                  ),
+                  // Дубликаты
+                  ActionButton(
+                    onPressed: (_isClearing ? null : () => _removeDuplicates(context)) ?? () {},
+                    isLoading: _isClearing,
+                    text: 'Дубликаты',
+                    color: Colors.orange,
+                    icon: Icons.clean_hands,
+                  ),
+                  // Очистить
+                  ActionButton(
+                    onPressed: (_isClearing ? null : () => _clearHistory(context)) ?? () {},
+                    isLoading: _isClearing,
+                    text: 'Очистить',
+                    color: Colors.red,
+                    icon: Icons.delete,
+                  ),
+                ],
+              ),
             ],
           )),
           Expanded(
