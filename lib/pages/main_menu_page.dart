@@ -127,12 +127,10 @@ class MainMenuPage extends StatelessWidget {
         final solved = snapshot.data ?? 0;
         final nextRiddleNumber = solved + 1;
         final neededScore = nextRiddleNumber * 100;
-
         return FutureBuilder<int>(
           future: AppDatabase.instance.getUserTotalScore(1),
           builder: (context, scoreSnapshot) {
             final totalScore = scoreSnapshot.data ?? 0;
-
             return ListTile(
               tileColor: Colors.green[100],
               title: const Text('Решить загадку'),

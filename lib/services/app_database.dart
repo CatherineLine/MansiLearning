@@ -226,7 +226,14 @@ class AppDatabase {
     await db.transaction((txn) async {
       if (data['users'] != null) {
         for (var item in List<Map<String, dynamic>>.from(data['users'])) {
-          await txn.insert('users', item, conflictAlgorithm: ConflictAlgorithm.replace);
+          final map = Map<String, dynamic>.from(item);
+          if (map.containsKey('name') && !map.containsKey('username')) {
+            map['username'] = map['name'];
+            map.remove('name');
+          }
+          map.removeWhere((key, value) =>
+          !['id', 'username', 'created_at', 'settings_json'].contains(key));
+          await txn.insert('users', map, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
       if (data['translations'] != null) {

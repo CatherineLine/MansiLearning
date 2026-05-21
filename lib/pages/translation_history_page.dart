@@ -55,25 +55,27 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     try {
       final exportData = await AppDatabase.instance.exportAllData();
       final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
-
       final now = DateTime.now();
-      final fileName = 'translation_history_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}.json';
-
+      final fileName = 'mansi_history_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}.json';
       final savePath = await FilePicker.platform.saveFile(
         dialogTitle: 'Экспорт истории переводов',
         fileName: fileName,
         type: FileType.custom,
         allowedExtensions: ['json'],
       );
-
-      if (savePath != null) {
-        final file = File(savePath);
-        await file.writeAsString(jsonString);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Данные успешно экспортированы')),
-          );
-        }
+      if (savePath == null) {
+        setState(() => _isExporting = false);
+        return;
+      }
+      if (jsonString.isEmpty) {
+        throw Exception('Нет данных для экспорта');
+      }
+      final file = File(savePath);
+      await file.writeAsString(jsonString);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Данные успешно экспортированы')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -81,6 +83,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           SnackBar(content: Text('Ошибка экспорта: $e')),
         );
       }
+      debugPrint('Export error: $e');
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }

@@ -93,15 +93,15 @@ class _TaskPageState extends State<TaskPage> {
         _showSuccess = false;
       });
     } else {
-      // Исправлено: tasks хранятся как Map, доступ через []
+      final currentTask = widget.tasks[_currentTaskIndex];
       await AppDatabase.instance.saveUserProgress(UserProgress(
         userId: 1,
-        taskId: widget.tasks[_currentTaskIndex]['id'] ?? 0,
+        taskId: currentTask['id'] as int? ?? 0,
         riddleId: null,
         sourceContext: 'task',
         isCompleted: true,
         attemptsCount: 1,
-        score: _score,
+        score: _score + 20,
       ));
       final totalScore = await AppDatabase.instance.getUserTotalScore(1);
       final solvedRiddlesCount = await AppDatabase.instance.getCompletedRiddlesCount(1);
