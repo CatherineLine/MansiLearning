@@ -6,28 +6,35 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 
-/// Сервис для перевода документов в фоновом режиме
+/// Сервис для перевода документов
 class FileTranslationService {
   static final FileTranslationService _instance = FileTranslationService._internal();
   factory FileTranslationService() => _instance;
   FileTranslationService._internal();
 
-  static const String translateApiEndpoint =
-      "https://ethnoportal.admhmao.ru/api/machine-translates/translate";
+  static const String translateApiEndpoint = "https://ethnoportal.admhmao.ru/api/machine-translates/translate";
 
   // Статус перевода
   final ValueNotifier<TranslationStatus?> statusNotifier = ValueNotifier(null);
-
-  // Текущий прогресс (0-100)
   final ValueNotifier<double> progressNotifier = ValueNotifier(0.0);
 
-  // Отмена перевода
   bool _isCancelled = false;
 
-  /// Поддерживаемые форматы
-  static const List<String> supportedExtensions = [
-    'txt', 'md', 'json', 'xml', 'html', 'rtf'
-  ];
+  // ✅ Направление перевода: true = на мансийский, false = с мансийского
+  bool _translateToMansi = true;
+
+  static const List<String> supportedExtensions = ['txt', 'md', 'json', 'xml', 'html', 'rtf'];
+
+  // ✅ API принимает максимум 200 символов за запрос
+  static const int maxChunkSize = 200;
+
+  /// Установка направления перевода
+  void setTranslationDirection({required bool toMansi}) {
+    _translateToMansi = toMansi;
+  }
+
+  /// Получение текущего направления
+  bool get isTranslatingToMansi => _translateToMansi;
 
   /// Выбор файла для перевода
   static Future<File?> pickFile() async {
@@ -36,18 +43,18 @@ class FileTranslationService {
       allowedExtensions: supportedExtensions,
       allowMultiple: false,
     );
-
     if (result != null && result.files.isNotEmpty) {
       return File(result.files.first.path!);
     }
     return null;
   }
 
-  /// Перевод файла
+  /// Перевод файла с поддержкой направления
   Future<File?> translateFile(File inputFile, {Function(double)? onProgress}) async {
     _isCancelled = false;
     progressNotifier.value = 0.0;
 
+    final directionText = _translateToMansi ? 'на мансийский' : 'с мансийского';
     statusNotifier.value = TranslationStatus(
       fileName: inputFile.path.split('/').last,
       status: 'Чтение файла...',
@@ -55,19 +62,19 @@ class FileTranslationService {
     );
 
     try {
-      // Шаг 1: Извлечение текста из файла
+      // Шаг 1: Извлечение текста
       String extractedText = await _extractTextFromFile(inputFile);
       if (_isCancelled) return null;
 
       statusNotifier.value = TranslationStatus(
         fileName: inputFile.path.split('/').last,
-        status: 'Извлечено ${extractedText.length} символов. Перевод...',
+        status: 'Извлечено ${extractedText.length} символов. Перевод $directionText...',
         progress: 10.0,
       );
       progressNotifier.value = 10.0;
       onProgress?.call(0.1);
 
-      // Шаг 2: Разбивка на части (если текст длинный)
+      // Шаг 2: Разбивка на чанки по 200 символов
       List<String> chunks = _splitTextIntoChunks(extractedText);
       List<String> translatedChunks = [];
 
@@ -81,15 +88,15 @@ class FileTranslationService {
           progress: currentProgress,
         );
         progressNotifier.value = currentProgress;
-        onProgress?.call(currentProgress / 100);  // ← ЗДЕСЬ ВСЁ ПРАВИЛЬНО (double)
+        onProgress?.call(currentProgress / 100);
 
-        String translated = await _translateText(chunks[i]);
+        // ✅ Перевод с учётом направления
+        String translated = await _translateText(chunks[i], toMansi: _translateToMansi);
         translatedChunks.add(translated);
       }
 
-      // Шаг 3: Склеивание результата
-      String fullTranslation = translatedChunks.join('\n\n');
-
+      // Шаг 3: Склеивание
+      String fullTranslation = translatedChunks.join('\n');
       statusNotifier.value = TranslationStatus(
         fileName: inputFile.path.split('/').last,
         status: 'Сохранение результата...',
@@ -98,7 +105,7 @@ class FileTranslationService {
       progressNotifier.value = 95.0;
       onProgress?.call(0.95);
 
-      // Шаг 4: Сохранение переведённого файла
+      // Шаг 4: Сохранение
       File? outputFile = await _saveTranslatedFile(
         inputFile.path.split('/').last,
         fullTranslation,
@@ -138,31 +145,44 @@ class FileTranslationService {
 
   /// Извлечение текста из файла
   Future<String> _extractTextFromFile(File file) async {
-    String content = await file.readAsString(encoding: utf8);
-    return content;
+    return await file.readAsString(encoding: utf8);
   }
 
-  /// Разбивка текста на части (API имеет ограничение на размер)
+  /// ✅ Разбивка текста на чанки по 200 символов (ограничение API)
   List<String> _splitTextIntoChunks(String text) {
-    const int maxChunkSize = 5000;
     List<String> chunks = [];
-
     for (int i = 0; i < text.length; i += maxChunkSize) {
       int end = (i + maxChunkSize < text.length) ? i + maxChunkSize : text.length;
-      chunks.add(text.substring(i, end));
-    }
 
+      // ✅ Дополнительная защита: не разбивать слова посередине
+      if (end < text.length && text[end] != ' ' && text[end] != '\n') {
+        // Ищем ближайший пробел или перенос
+        int lastSpace = text.substring(i, end).lastIndexOf(' ');
+        int lastNewline = text.substring(i, end).lastIndexOf('\n');
+        int breakPoint = lastSpace > lastNewline ? i + lastSpace + 1 : end;
+        chunks.add(text.substring(i, breakPoint).trim());
+        i = breakPoint - 1; // Компенсация инкремента в цикле
+      } else {
+        chunks.add(text.substring(i, end));
+      }
+    }
     return chunks;
   }
 
-  /// Перевод текста через API
-  Future<String> _translateText(String text) async {
-    debugPrint('📤 Отправка текста (${text.length} символов): ${text.substring(0, text.length > 100 ? 100 : text.length)}...');
+  /// ✅ Перевод текста с выбором направления
+  Future<String> _translateText(String text, {required bool toMansi}) async {
+    if (text.trim().isEmpty) return text;
+
+    // ✅ Коды языков: 1 = русский, 2 = мансийский
+    final int sourceLanguage = toMansi ? 1 : 2;
+    final int targetLanguage = toMansi ? 2 : 1;
+
+    debugPrint('📤 Отправка (${text.length} символов): ${text.substring(0, text.length > 50 ? 50 : text.length)}...');
 
     final Map<String, dynamic> data = {
       "text": text,
-      "sourceLanguage": 1, // Русский
-      "targetLanguage": 2, // Мансийский
+      "sourceLanguage": sourceLanguage,
+      "targetLanguage": targetLanguage,
     };
 
     try {
@@ -172,8 +192,7 @@ class FileTranslationService {
         body: json.encode(data),
       ).timeout(const Duration(seconds: 30));
 
-      debugPrint('📥 Статус ответа: ${response.statusCode}');
-      debugPrint('📥 Тело ответа: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
+      debugPrint('📥 Статус: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         String responseBody = utf8.decode(response.bodyBytes);
@@ -182,7 +201,8 @@ class FileTranslationService {
         debugPrint('✅ Перевод получен (${translated.length} символов)');
         return translated;
       } else {
-        debugPrint('❌ Ошибка API: ${response.statusCode}');
+        debugPrint('❌ Ошибка API: ${response.statusCode} — ${response.body}');
+        // Возвращаем исходный текст, чтобы не терять данные
         return text;
       }
     } catch (e) {
@@ -191,17 +211,29 @@ class FileTranslationService {
     }
   }
 
-  /// Сохранение переведённого файла
+  /// Сохранение переведённого файла в публичную папку
   Future<File?> _saveTranslatedFile(String originalName, String content, String extension) async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName = originalName.replaceAll('.$extension', '_translated.$extension');
-      final file = File('${directory.path}/$fileName');
+      // ✅ Публичная папка Downloads
+      Directory targetDir;
+      try {
+        targetDir = Directory('/storage/emulated/0/Download/MansiTranslator');
+        if (!await targetDir.exists()) {
+          await targetDir.create(recursive: true);
+        }
+      } catch (_) {
+        targetDir = await getApplicationDocumentsDirectory();
+      }
+
+      final directionSuffix = _translateToMansi ? '_to_mansi' : '_from_mansi';
+      final fileName = originalName.replaceAll('.$extension', '${directionSuffix}_translated.$extension');
+      final file = File('${targetDir.path}/$fileName');
+
       await file.writeAsString(content, encoding: utf8);
       debugPrint('✅ Файл сохранён: ${file.path}');
       return file;
     } catch (e) {
-      debugPrint('❌ Ошибка сохранения файла: $e');
+      debugPrint('❌ Ошибка сохранения: $e');
       return null;
     }
   }

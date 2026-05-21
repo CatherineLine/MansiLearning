@@ -31,24 +31,19 @@ class BackgroundTranslationService {
       debugPrint('Перевод уже выполняется');
       return null;
     }
-
     _isRunning = true;
     _currentTask = Completer<File?>();
 
-    // Подписываемся на обновления статуса
+    // ✅ Подписываемся на обновления статуса из FileTranslationService
     _translationService.statusNotifier.addListener(_onStatusChange);
-    _translationService.progressNotifier.addListener(_onProgressChange);
 
-    // Запускаем перевод в фоне (не блокируем UI)
-    await Future.delayed(Duration.zero);
-
+    // ✅ Запускаем перевод через правильный метод: startTranslation
     _translationService.translateFile(file, onProgress: (progress) {
       onProgress?.call(progress);
     }).then((result) {
       _isRunning = false;
       _currentTask?.complete(result);
       _translationService.statusNotifier.removeListener(_onStatusChange);
-      _translationService.progressNotifier.removeListener(_onProgressChange);
     }).catchError((e) {
       _isRunning = false;
       _currentTask?.completeError(e);
@@ -58,11 +53,10 @@ class BackgroundTranslationService {
   }
 
   void _onStatusChange() {
+    // ✅ Обновляем статус и прогресс из основного сервиса
     statusNotifier.value = _translationService.statusNotifier.value;
-  }
-
-  void _onProgressChange() {
-    // Обновление прогресса
+    // Если нужно обновлять прогресс отдельно:
+    // onProgress?.call(_translationService.progressNotifier.value);
   }
 
   /// Проверка, выполняется ли перевод

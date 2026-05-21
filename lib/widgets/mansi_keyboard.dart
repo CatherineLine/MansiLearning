@@ -4,11 +4,15 @@ class MansiKeyboard extends StatelessWidget {
   final Function(String) onTextInput;
   final VoidCallback onBackspace;
 
+  static const Color appGreen = Color(0xFF0A4B47);
+  static const Color appBeige = Color(0xFFE7E4DF);
+
   const MansiKeyboard({
     super.key,
     required this.onTextInput,
     required this.onBackspace,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -36,14 +40,21 @@ class MansiKeyboard extends StatelessWidget {
       height: 40,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
+          backgroundColor: appBeige,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(7),
           ),
           padding: const EdgeInsets.all(3),
         ),
         onPressed: () => onTextInput(letter),
-        child: Text(letter, style: const TextStyle(fontSize: 23)),
+        child: Text(
+          letter,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: appGreen,
+          ),
+        ),
       ),
     );
   }

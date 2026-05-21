@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/file_translation_service.dart';
@@ -12,11 +13,11 @@ class DocumentTranslationPage extends StatefulWidget {
 class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
   final FileTranslationService _translationService = FileTranslationService();
   bool _isTranslating = false;
-  dynamic _currentStatus; // Используем dynamic для безопасной работы с внешним статусом
 
   @override
   void initState() {
     super.initState();
+    // ✅ Подписываемся на обновления статуса из сервиса
     _translationService.statusNotifier.addListener(_onStatusUpdate);
   }
 
@@ -28,32 +29,42 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
 
   void _onStatusUpdate() {
     if (mounted) {
-      setState(() {
-        _currentStatus = _translationService.statusNotifier.value;
-        final progress = _currentStatus?.progress;
-        _isTranslating = progress != null && progress >= 0 && progress < 100;
-      });
+      final status = _translationService.statusNotifier.value;
+      // ✅ Сбрасываем флаг, если перевод завершён или произошла ошибка
+      if (status != null && (status.progress == 100.0 || status.progress == -1.0)) {
+        setState(() => _isTranslating = false);
+      }
     }
   }
 
   Future<void> _pickAndTranslateFile() async {
-    final file = await FileTranslationService.pickFile();
-    if (file == null) return;
-    setState(() => _isTranslating = true);
-  }
+    // ✅ Проверяем, не идёт ли уже перевод
+    if (_isTranslating) return;
 
-  void _cancelTranslation() {
-    setState(() {
-      _isTranslating = false;
-      // copyWith отсутствует, поэтому просто сбрасываем статус или помечаем как отменённый
-      _currentStatus = null;
-    });
+    try {
+      final file = await FileTranslationService.pickFile();
+      if (file == null) return; // Пользователь отменил выбор
+
+      setState(() => _isTranslating = true);
+
+      // ✅ Запускаем реальный перевод через сервис
+      await _translationService.translateFile(file);
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e')),
+        );
+      }
+      setState(() => _isTranslating = false); // ✅ Сбрасываем флаг при ошибке
+    }
   }
 
   void _shareTranslatedFile() {
-    if (_currentStatus?.outputFile != null) {
+    final outputFile = _translationService.statusNotifier.value?.outputFile;
+    if (outputFile != null) {
       Share.shareXFiles(
-        [XFile(_currentStatus!.outputFile!.path)],
+        [XFile(outputFile.path)],
         text: 'Переведённый документ',
       );
     }
@@ -61,9 +72,11 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final double currentProgress = _currentStatus?.progress ?? -1;
-    final bool isActiveTranslation = currentProgress >= 0 && currentProgress < 100;
-    final bool isCompleted = currentProgress == 100;
+    // ✅ Получаем статус из ValueNotifier сервиса
+    final status = _translationService.statusNotifier.value;
+    final currentProgress = status?.progress ?? -1;
+    final isActiveTranslation = currentProgress >= 0 && currentProgress < 100;
+    final isCompleted = currentProgress == 100;
 
     return Scaffold(
       appBar: AppBar(
@@ -76,6 +89,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Описание форматов
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -97,10 +111,32 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
               ),
             ),
             const SizedBox(height: 24),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Перевод ', style: TextStyle(fontSize: 16)),
+                Switch(
+                  value: _translationService.isTranslatingToMansi,
+                  onChanged: (value) {
+                    _translationService.setTranslationDirection(toMansi: value);
+                    setState(() {}); // Обновить текст переключателя
+                  },
+                  activeColor: const Color(0xFF0A4B47),
+                ),
+                Text(
+                  _translationService.isTranslatingToMansi ? 'на мансийский' : 'с мансийского',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Кнопка выбора файла
             ElevatedButton.icon(
               onPressed: _isTranslating ? null : _pickAndTranslateFile,
               icon: const Icon(Icons.upload_file),
-              label: const Text('Выбрать файл и перевести'),
+              label: Text(_isTranslating ? 'Перевод...' : 'Выбрать файл и перевести'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A4B47),
                 foregroundColor: Colors.white,
@@ -109,7 +145,9 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
               ),
             ),
             const SizedBox(height: 24),
-            if (_currentStatus != null) ...[
+
+            // Статус перевода
+            if (status != null) ...[
               const Divider(),
               const SizedBox(height: 16),
               Card(
@@ -127,19 +165,23 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           else if (isCompleted)
-                            const Icon(Icons.check_circle, color: Colors.green),
+                            const Icon(Icons.check_circle, color: Colors.green)
+                          else if (currentProgress == -1)
+                              const Icon(Icons.error, color: Colors.red),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              _currentStatus?.fileName ?? '',
+                              status.fileName,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(_currentStatus?.status ?? ''),
+                      Text(status.status),
                       const SizedBox(height: 8),
+
+                      // Прогресс-бар
                       if (currentProgress >= 0 && currentProgress <= 100) ...[
                         LinearProgressIndicator(
                           value: currentProgress / 100,
@@ -149,10 +191,15 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                         const SizedBox(height: 8),
                         Text('${currentProgress.toStringAsFixed(0)}%'),
                       ],
+
+                      // Кнопка отмены
                       if (isActiveTranslation) ...[
                         const SizedBox(height: 16),
                         OutlinedButton(
-                          onPressed: _cancelTranslation,
+                          onPressed: () {
+                            _translationService.cancelTranslation();
+                            setState(() => _isTranslating = false);
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             minimumSize: const Size(double.infinity, 40),
@@ -160,7 +207,9 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                           child: const Text('Отменить'),
                         ),
                       ],
-                      if (isCompleted && _currentStatus?.outputFile != null) ...[
+
+                      // Кнопки после завершения
+                      if (isCompleted && status.outputFile != null) ...[
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -168,11 +217,11 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                               child: ElevatedButton.icon(
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Файл сохранён в папке приложения')),
+                                    SnackBar(content: Text('Файл: ${status.outputFile!.path}')),
                                   );
                                 },
                                 icon: const Icon(Icons.save_alt),
-                                label: const Text('Файл сохранён'),
+                                label: const Text('Путь к файлу'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF0A4B47),
                                 ),
@@ -195,6 +244,8 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
               ),
             ],
             const Spacer(),
+
+            // Информация
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
