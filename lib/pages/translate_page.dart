@@ -104,14 +104,14 @@ class _TranslatePageState extends State<TranslatePage> {
 
         await _animateTextAppearance(translatedText);
 
-        // ✅ Сохранение вынесено в отдельный try/catch, чтобы ошибка БД не ломала UI перевода
         try {
           await AppDatabase.instance.addTranslation(Translation(
-            sessionId: 1,
+            sessionId: 1,  // ✅ Обязательно!
             originalText: text,
             translatedText: translatedText,
             sourceLanguage: _isSwapped ? 'mansi' : 'ru',
             targetLanguage: _isSwapped ? 'ru' : 'mansi',
+            createdAt: DateTime.now(),
           ));
         } catch (dbError) {
           debugPrint('⚠️ Ошибка сохранения истории: $dbError');
@@ -288,16 +288,30 @@ class _TranslatePageState extends State<TranslatePage> {
     );
   }
 
-  Widget _buildDrawer() {
+  Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: Container(
         padding: const EdgeInsets.only(top: 40),
         decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
-        child: ListView(padding: EdgeInsets.zero, children: [
-          ListTile(title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const TranslatePage()))),
-          ListTile(title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => MainMenuPage()))),
-          ListTile(title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => TranslationHistoryPage()))),
-        ]),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            ListTile(
+              title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
+            ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey), // ✅ РАЗДЕЛИТЕЛЬ
+            ListTile(
+              title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
+            ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey), // ✅ РАЗДЕЛИТЕЛЬ
+            ListTile(
+              title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
+              onTap: () {},
+            ),
+          ],
+        ),
       ),
     );
   }

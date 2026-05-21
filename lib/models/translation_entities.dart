@@ -20,10 +20,11 @@ class Translation {
   Map<String, dynamic> toMap() => {
     'id': id,
     'session_id': sessionId ?? 1,
-    'source_text': originalText,
-    'target_text': translatedText,
-    'source_lang': sourceLanguage,
-    'target_lang': targetLanguage,
+    'original_text': originalText,
+    'translated_text': translatedText,
+    'source_language': sourceLanguage,
+    'target_language': targetLanguage,
+    'created_at': createdAt.toIso8601String(),
     'is_favorite': isFavorite ? 1 : 0,
   };
 

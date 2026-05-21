@@ -181,10 +181,18 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       ),
         endDrawer: Drawer(
         child: Container(padding: const EdgeInsets.only(top: 40), decoration: const BoxDecoration(color: Color(0xFFE7E4DF)), child: ListView(padding: EdgeInsets.zero, children: [
-          ListTile(title: const Text('Переводчик', style: TextStyle(fontSize: 20)), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const TranslatePage()))),
-          ListTile(title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => MainMenuPage()))),
-          ListTile(title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))), onTap: () {}),
-        ])),
+          ListTile(
+            title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)), // ✅ Черный
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
+          ),
+          ListTile(
+            title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)), // ✅ Черный (был Color(0xFF0A4B47))
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
+          ),
+          ListTile(
+            title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))), // ✅ Зеленый
+            onTap: () {},
+          ),])),
       ),
     );
   }

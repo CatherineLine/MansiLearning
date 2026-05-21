@@ -43,8 +43,17 @@ class AppDatabase {
     await db.execute('''CREATE TABLE riddles (id $idType, question_text $textType, answer_text $textType, hint_text TEXT, difficulty_level $textType, category TEXT)''');
     await db.execute('''CREATE TABLE user_progress (id $idType, user_id $integerType, task_id INTEGER, phrase_id INTEGER, riddle_id INTEGER, source_context $textType, is_completed $booleanType, attempts_count $integerType, score $integerType, last_attempt $textType, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL, FOREIGN KEY (riddle_id) REFERENCES riddles (id) ON DELETE SET NULL)''');
     await db.execute('''CREATE TABLE translation_sessions (id $idType, user_id $integerType, session_type $textType, started_at $textType, status $textType, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE)''');
-    await db.execute('''CREATE TABLE translations (id $idType, session_id $integerType, source_text $textType, target_text $textType, source_lang $textType, target_lang $textType, is_favorite $booleanType, FOREIGN KEY (session_id) REFERENCES translation_sessions (id) ON DELETE CASCADE)''');
-    await db.execute('''CREATE TABLE documents (id $idType, session_id $integerType, original_file_path $textType, translated_file_path TEXT, file_format $textType, status $textType, uploaded_at $textType, FOREIGN KEY (session_id) REFERENCES translation_sessions (id) ON DELETE CASCADE)''');
+    await db.execute('''CREATE TABLE translations (
+  id $idType, 
+  session_id $integerType, 
+  source_text $textType, 
+  target_text $textType,
+  source_lang $textType, 
+  target_lang $textType, 
+  is_favorite $booleanType,
+  created_at TEXT,
+  FOREIGN KEY (session_id) REFERENCES translation_sessions (id) ON DELETE CASCADE
+)''');    await db.execute('''CREATE TABLE documents (id $idType, session_id $integerType, original_file_path $textType, translated_file_path TEXT, file_format $textType, status $textType, uploaded_at $textType, FOREIGN KEY (session_id) REFERENCES translation_sessions (id) ON DELETE CASCADE)''');
     await db.execute('''CREATE TABLE phrase_categories (id $idType, name $textType, icon_resource $textType)''');
     await db.execute('''CREATE TABLE phrases (id $idType, category_id $integerType, media_id INTEGER, text_mansi $textType, text_russian $textType, transcription TEXT, FOREIGN KEY (category_id) REFERENCES phrase_categories (id) ON DELETE CASCADE, FOREIGN KEY (media_id) REFERENCES media_assets (id) ON DELETE SET NULL)''');
     await db.execute('''CREATE TABLE user_phrasebook (user_id $integerType, phrase_id $integerType, is_favorite $booleanType, repetition_count $integerType, learned_at TEXT, PRIMARY KEY (user_id, phrase_id), FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, FOREIGN KEY (phrase_id) REFERENCES phrases (id) ON DELETE CASCADE)''');
@@ -157,21 +166,22 @@ class AppDatabase {
     final db = await database;
     await db.transaction((txn) async {
       if (data['users'] != null) {
-        for (var item in (data['users'] as List).cast<Map<String, dynamic>>()) {
-          await txn.insert('users', item, conflictAlgorithm: ConflictAlgorithm.replace);
+        for (var item in data['users'] as List) {
+          await txn.insert('users', item as Map<String, dynamic>, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
       if (data['translations'] != null) {
-        for (var item in (data['translations'] as List).cast<Map<String, dynamic>>()) {
-          // ✅ Гарантируем session_id
-          final withSession = Map<String, dynamic>.from(item);
-          withSession['session_id'] ??= 1;
-          await txn.insert('translations', withSession, conflictAlgorithm: ConflictAlgorithm.ignore);
+        for (var item in data['translations'] as List) {
+          final map = item as Map<String, dynamic>;
+          if (!map.containsKey('session_id') || map['session_id'] == null) {
+            map['session_id'] = 1;
+          }
+          await txn.insert('translations', map, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
       if (data['progress'] != null) {
-        for (var item in (data['progress'] as List).cast<Map<String, dynamic>>()) {
-          await txn.insert('user_progress', item, conflictAlgorithm: ConflictAlgorithm.replace);
+        for (var item in data['progress'] as List) {
+          await txn.insert('user_progress', item as Map<String, dynamic>, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
     });

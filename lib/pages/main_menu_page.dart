@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/phrasebook_entities.dart' as pb;
 import '../services/app_database.dart';
 import 'document_translation_page.dart';
 import 'module_levels_page.dart';
@@ -96,11 +97,13 @@ class MainMenuPage extends StatelessWidget {
   }
 
   Widget _buildModuleItem(BuildContext context, Map<String, dynamic> module) {
-    return FutureBuilder<List>(
+    return FutureBuilder<List<pb.UserProgress>>(
       future: AppDatabase.instance.getUserProgress(1),
       builder: (context, snapshot) {
         final progress = snapshot.data ?? [];
-        final completed = progress.isNotEmpty;
+        final moduleProgress = progress.where((p) => p.sourceContext == 'task').toList();
+        final completed = moduleProgress.isNotEmpty;
+
         return ListTile(
           title: Text(module['title']),
           subtitle: completed ? const Text('Пройден') : const Text('В процессе'),
@@ -177,19 +180,17 @@ class MainMenuPage extends StatelessWidget {
           children: [
             ListTile(
               title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage()));
-              },
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
             ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
-              title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+              title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
+            ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
+            ListTile(
+              title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
               onTap: () {},
-            ),
-            ListTile(
-              title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => TranslationHistoryPage()));
-              },
             ),
           ],
         ),

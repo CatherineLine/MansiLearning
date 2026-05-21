@@ -146,13 +146,15 @@ class _RiddlePageState extends State<RiddlePage> {
               title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
             ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
               title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
             ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
               title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TranslationHistoryPage())),
+              onTap: () {},
             ),
           ],
         ),
