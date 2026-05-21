@@ -37,7 +37,7 @@ dependencies:
   sqflite_common_ffi: ^2.0.0
   sembast: ^3.4.0
   sembast_web: ^2.1.0
-  intl: 0.20.2
+  intl: 0.19.0
   file_picker: ^8.0.0
   web: ^0.5.0
   js:
@@ -60,6 +60,8 @@ dependencies:
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

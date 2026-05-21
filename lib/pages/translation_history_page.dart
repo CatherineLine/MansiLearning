@@ -68,7 +68,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       final now = DateTime.now();
       final fileName = 'mansi_backup_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}.json';
 
-      //  Попытка сохранить в публичную папку Downloads
       Directory targetDir;
       try {
         targetDir = Directory('/storage/emulated/0/Download');
@@ -76,7 +75,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           await targetDir.create(recursive: true);
         }
       } catch (_) {
-        // 🛡️ Fallback: если Android заблокировал прямой доступ, используем внешнюю папку приложения
         targetDir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
       }
 
@@ -84,7 +82,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       final file = File(filePath);
       await file.writeAsString(jsonString);
 
-      // 🎨 Красивое диалоговое окно в стиле приложения
       if (mounted) {
         showDialog(
           context: context,
@@ -195,13 +192,68 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
   }
 
   Future<void> _selectDateTime(BuildContext context, bool isStart) async {
-    final date = await showDatePicker(context: context, initialDate: isStart ? (_startDate ?? DateTime.now()) : (_endDate ?? DateTime.now()), firstDate: DateTime(2000), lastDate: DateTime(2100));
-    if (date != null) {
-      final time = await showTimePicker(context: context, initialTime: isStart ? (_startTime ?? TimeOfDay.now()) : (_endTime ?? TimeOfDay.now()));
-      if (time != null) {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: isStart ? _startDate ?? DateTime.now() : _endDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      locale: const Locale('ru', 'RU'),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: const Color(0xFF0A4B47),
+              onPrimary: Colors.white,
+              onSurface: const Color(0xFF0A4B47),
+            ),
+          ),
+          child: Localizations.override(
+            context: context,
+            locale: const Locale('ru', 'RU'),
+            child: child!,
+          ),
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: isStart ? _startTime ?? TimeOfDay.now() : _endTime ?? TimeOfDay.now(),
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: const Color(0xFF0A4B47),
+                onPrimary: Colors.white,
+                onSurface: const Color(0xFF0A4B47),
+              ),
+            ),
+            child: Localizations.override(
+              context: context,
+              locale: const Locale('ru', 'RU'),
+              child: child!,
+            ),
+          );
+        },
+      );
+
+      if (pickedTime != null) {
         setState(() {
-          final combined = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-          if (isStart) { _startDate = combined; _startTime = time; } else { _endDate = combined; _endTime = time; }
+          final combinedDateTime = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+          if (isStart) {
+            _startDate = combinedDateTime;
+            _startTime = pickedTime;
+          } else {
+            _endDate = combinedDateTime;
+            _endTime = pickedTime;
+          }
         });
       }
     }
@@ -224,20 +276,115 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
         children: [
           Padding(padding: const EdgeInsets.all(16.0), child: Column(
             children: [
-              Row(children: [
-                Expanded(child: InkWell(onTap: () => _selectDateTime(context, true), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey)), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.calendar_today, size: 16), const SizedBox(width: 4), Flexible(child: Text(_startDate != null ? _dateFormat.format(_startDate!) : 'Начало', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))])))),
-                const SizedBox(width: 4),
-                Expanded(child: InkWell(onTap: () => _selectDateTime(context, false), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey)), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.calendar_today, size: 16), const SizedBox(width: 4), Flexible(child: Text(_endDate != null ? _dateFormat.format(_endDate!) : 'Конец', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))])))),
-              ]),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectDateTime(context, true),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE7E4DF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF0A4B47), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.calendar_today, size: 20, color: Color(0xFF0A4B47)),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                _startDate != null
+                                    ? _dateFormat.format(_startDate!)
+                                    : 'Начало',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF0A4B47),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectDateTime(context, false),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE7E4DF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF0A4B47), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.event, size: 20, color: Color(0xFF0A4B47)),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                _endDate != null
+                                    ? _dateFormat.format(_endDate!)
+                                    : 'Конец',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF0A4B47),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
-              TextField(controller: _searchController, decoration: InputDecoration(labelText: 'Поиск по тексту', prefixIcon: const Icon(Icons.search), border: const OutlineInputBorder(), suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () { setState(() { _searchQuery = ''; _searchController.clear(); }); }) : null), onChanged: (v) => setState(() => _searchQuery = v.toLowerCase())),
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  labelText: 'Поиск перевода',
+                  labelStyle: const TextStyle(color: Color(0xFF0A4B47)),
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFF0A4B47)),
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Color(0xFF0A4B47)),
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Color(0xFF0A4B47)),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                    icon: const Icon(Icons.clear, color: Color(0xFF0A4B47)),
+                    onPressed: () {
+                      setState(() { _searchQuery = ''; _searchController.clear(); });
+                    },
+                  )
+                      : null,
+                ),
+                onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 alignment: WrapAlignment.center,
                 children: [
-                  // Кнопка Экспорта
                   ActionButton(
                     onPressed: (_isExporting ? null : () => _exportToDocuments(context)) ?? () {},
                     isLoading: false,
@@ -245,7 +392,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                     color: const Color(0xFF0A4B47),
                     icon: Icons.folder,
                   ),
-                  // Импорт
                   ActionButton(
                     onPressed: (_isImporting ? null : () => _importAllData(context)) ?? () {},
                     isLoading: _isImporting,
@@ -253,7 +399,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                     color: const Color(0xFF0A4B47),
                     icon: Icons.download,
                   ),
-                  // Дубликаты
                   ActionButton(
                     onPressed: (_isClearing ? null : () => _removeDuplicates(context)) ?? () {},
                     isLoading: _isClearing,
@@ -261,7 +406,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                     color: Colors.orange,
                     icon: Icons.clean_hands,
                   ),
-                  // Очистить
                   ActionButton(
                     onPressed: (_isClearing ? null : () => _clearHistory(context)) ?? () {},
                     isLoading: _isClearing,

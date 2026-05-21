@@ -263,7 +263,19 @@ class _TranslatePageState extends State<TranslatePage> {
       child: Stack(children: [
         TextField(controller: controller2, maxLines: 10, readOnly: true, decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.all(16))),
         if (_isTranslating)
-          Positioned(bottom: 0, left: 0, right: 0, child: LinearProgressIndicator(backgroundColor: Colors.grey[200], valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0A4B47)))),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+              child: LinearProgressIndicator(
+                backgroundColor: Colors.grey[200],
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0A4B47)),
+                minHeight: 6,
+              ),
+            ),
+          ),
         Positioned(
           bottom: 8, right: 8,
           child: Container(
