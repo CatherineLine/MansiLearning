@@ -7,10 +7,9 @@ import '../main.dart';
 import '../models/translation_entities.dart';
 import '../services/app_database.dart';
 import '../services/android_tts_service.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/custom_buttons.dart';
 import '../widgets/mansi_keyboard.dart';
-import 'main_menu_page.dart';
-import 'translation_history_page.dart';
 
 class TranslatePage extends StatefulWidget {
   const TranslatePage({super.key});
@@ -106,7 +105,7 @@ class _TranslatePageState extends State<TranslatePage> {
 
         try {
           await AppDatabase.instance.addTranslation(Translation(
-            sessionId: 1,  // ✅ Обязательно!
+            sessionId: 1,
             originalText: text,
             translatedText: translatedText,
             sourceLanguage: _isSwapped ? 'mansi' : 'ru',
@@ -115,13 +114,14 @@ class _TranslatePageState extends State<TranslatePage> {
           ));
         } catch (dbError) {
           debugPrint('⚠️ Ошибка сохранения истории: $dbError');
-          // Не прерываем работу, перевод уже показан пользователю
         }
       } else {
-        if (mounted) setState(() {
+        if (mounted) {
+          setState(() {
           controller2.text = 'Ошибка при запросе данных (код ${response.statusCode})';
           _isTranslating = false;
         });
+        }
       }
     } catch (e) {
       if (mounted) setState(() {
@@ -159,7 +159,6 @@ class _TranslatePageState extends State<TranslatePage> {
     _debounce = Timer(const Duration(seconds: 2), () => getTranslate(text));
   }
 
-  // ✅ Надёжное открытие меню
   void _openMenu() {
     _scaffoldKey.currentState?.openEndDrawer();
   }
@@ -223,7 +222,7 @@ class _TranslatePageState extends State<TranslatePage> {
             ),
         ],
       ),
-      endDrawer: _buildDrawer(),
+      endDrawer: const AppDrawer(activeSection: AppDrawerSection.learning),
     );
   }
 
@@ -285,34 +284,6 @@ class _TranslatePageState extends State<TranslatePage> {
           ),
         ),
       ]),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: Container(
-        padding: const EdgeInsets.only(top: 40),
-        decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            ListTile(
-              title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
-            ),
-            const Divider(height: 1, thickness: 0.5, color: Colors.grey), // ✅ РАЗДЕЛИТЕЛЬ
-            ListTile(
-              title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
-            ),
-            const Divider(height: 1, thickness: 0.5, color: Colors.grey), // ✅ РАЗДЕЛИТЕЛЬ
-            ListTile(
-              title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {},
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -20,14 +20,13 @@ class Translation {
   Map<String, dynamic> toMap() => {
     'id': id,
     'session_id': sessionId ?? 1,
-    'original_text': originalText,
-    'translated_text': translatedText,
-    'source_language': sourceLanguage,
-    'target_language': targetLanguage,
-    'created_at': createdAt.toIso8601String(),
+    'source_text': originalText,
+    'target_text': translatedText,
+    'source_lang': sourceLanguage,
+    'target_lang': targetLanguage,
     'is_favorite': isFavorite ? 1 : 0,
+    'created_at': createdAt.toIso8601String(),
   };
-
   factory Translation.fromMap(Map<String, dynamic> map) => Translation(
     id: map['id'],
     sessionId: map['session_id'],
@@ -35,6 +34,7 @@ class Translation {
     translatedText: map['target_text'] ?? '',
     sourceLanguage: map['source_lang'] ?? 'ru',
     targetLanguage: map['target_lang'] ?? 'mansi',
+    createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
     isFavorite: map['is_favorite'] == 1,
   );
 }

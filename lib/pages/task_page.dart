@@ -6,7 +6,6 @@ import 'module_levels_page.dart';
 import 'riddle_page.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
-import 'translation_history_page.dart';
 import '../models/learning_entities.dart';
 
 class TaskPage extends StatefulWidget {

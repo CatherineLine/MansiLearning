@@ -4,7 +4,6 @@ import '../services/app_database.dart';
 import 'task_page.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
-import 'translation_history_page.dart';
 
 class TheoryPage extends StatefulWidget {
   final int moduleId;

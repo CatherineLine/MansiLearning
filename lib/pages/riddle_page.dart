@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/app_database.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
-import 'translation_history_page.dart';
 
 class RiddlePage extends StatefulWidget {
   final int riddleIndex;

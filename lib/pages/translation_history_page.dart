@@ -5,9 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/app_database.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/custom_buttons.dart';
-import 'translate_page.dart';
-import 'main_menu_page.dart';
 
 class TranslationHistoryPage extends StatefulWidget {
   const TranslationHistoryPage({super.key});
@@ -179,21 +178,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           ),
         ],
       ),
-        endDrawer: Drawer(
-        child: Container(padding: const EdgeInsets.only(top: 40), decoration: const BoxDecoration(color: Color(0xFFE7E4DF)), child: ListView(padding: EdgeInsets.zero, children: [
-          ListTile(
-            title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)), // ✅ Черный
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
-          ),
-          ListTile(
-            title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)), // ✅ Черный (был Color(0xFF0A4B47))
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
-          ),
-          ListTile(
-            title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))), // ✅ Зеленый
-            onTap: () {},
-          ),])),
-      ),
+        endDrawer: const AppDrawer(activeSection: AppDrawerSection.translator),
     );
   }
 }

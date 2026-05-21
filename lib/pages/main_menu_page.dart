@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/phrasebook_entities.dart' as pb;
 import '../services/app_database.dart';
+import '../widgets/app_drawer.dart';
 import 'document_translation_page.dart';
 import 'module_levels_page.dart';
 import 'riddle_page.dart';
-import 'translate_page.dart';
-import 'translation_history_page.dart';
 
 class MainMenuPage extends StatelessWidget {
   final List<Map<String, dynamic>> modules = [
@@ -88,13 +87,10 @@ class MainMenuPage extends StatelessWidget {
           ],
         ),
       ),
-      endDrawer: _buildDrawer(context),
+      endDrawer: const AppDrawer(activeSection: AppDrawerSection.learning),
     );
   }
 
-  void _openMenu(BuildContext context) {
-    Scaffold.of(context).openEndDrawer();
-  }
 
   Widget _buildModuleItem(BuildContext context, Map<String, dynamic> module) {
     return FutureBuilder<List<pb.UserProgress>>(
@@ -170,33 +166,6 @@ class MainMenuPage extends StatelessWidget {
     }
   }
 
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: Container(
-        padding: const EdgeInsets.only(top: 40),
-        decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            ListTile(
-              title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
-            ),
-            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
-            ListTile(
-              title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
-            ),
-            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
-            ListTile(
-              title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
-              onTap: () {},
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 Future<Map<String, dynamic>> loadRiddles() async {
