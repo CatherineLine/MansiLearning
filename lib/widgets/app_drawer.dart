@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../pages/phrasebook_page.dart';
 import '../pages/translate_page.dart';
 import '../pages/main_menu_page.dart';
 import '../pages/translation_history_page.dart';
 
-enum DrawerActiveSection { translator, learning, history }
+enum DrawerActiveSection { translator, learning, history, phrasebook }
 
 class AppDrawer extends StatelessWidget {
   final DrawerActiveSection activeSection;
@@ -47,6 +48,14 @@ class AppDrawer extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslationHistoryPage()));
+              },
+            ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
+            ListTile(
+              title: Text('Разговорник', style: TextStyle(fontSize: 20, color: _getColor(DrawerActiveSection.history))),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const PhrasebookPage()));
               },
             ),
           ],
