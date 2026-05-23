@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:Mansi_Translator/tts_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import '../main.dart';
-import '../models/translation_entities.dart';
-import '../services/app_database.dart';
-import '../services/android_tts_service.dart';
-import '../widgets/app_drawer.dart';
-import '../widgets/custom_buttons.dart';
-import '../widgets/mansi_keyboard.dart';
+import '../../main.dart';
+import '../../models/translation_entities.dart';
+import '../../services/app_database.dart';
+//import '../../services/android_tts_service.dart';
+import '../../widgets/app_drawer.dart';
+import '../../widgets/custom_buttons.dart';
+import '../../widgets/mansi_keyboard.dart';
 
 class TranslatePage extends StatefulWidget {
   const TranslatePage({super.key});
@@ -49,7 +50,7 @@ class _TranslatePageState extends State<TranslatePage> {
     _focusNode.dispose();
     controller1.dispose();
     controller2.dispose();
-    AndroidTTSService.dispose();
+    //AndroidTTSService.dispose();
     super.dispose();
   }
 
@@ -57,7 +58,7 @@ class _TranslatePageState extends State<TranslatePage> {
     if (mounted) setState(() => _isKeyboardVisible = _focusNode.hasFocus);
   }
 
-  void _showVoiceSettings() {
+  /*void _showVoiceSettings() {
     if (navigatorKey.currentContext == null) return;
     showModalBottomSheet(
       context: navigatorKey.currentContext!,
@@ -71,7 +72,7 @@ class _TranslatePageState extends State<TranslatePage> {
         onPitchChanged: (pitch) { setState(() => _speechPitch = pitch); AndroidTTSService.setPitch(pitch); },
       ),
     );
-  }
+  }*/
 
   Future<void> getTranslate(String text) async {
     if (text.trim().isEmpty) {
@@ -124,10 +125,12 @@ class _TranslatePageState extends State<TranslatePage> {
         }
       }
     } catch (e) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         controller2.text = 'Ошибка соединения с сервером';
         _isTranslating = false;
       });
+      }
       debugPrint('🌐 Network error: $e');
     }
   }
@@ -179,7 +182,7 @@ class _TranslatePageState extends State<TranslatePage> {
         backgroundColor: const Color(0xFF0A4B47),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.settings_voice, color: Colors.white, size: 28), onPressed: _showVoiceSettings, tooltip: 'Настройки голоса'),
+          //IconButton(icon: const Icon(Icons.settings_voice, color: Colors.white, size: 28), onPressed: _showVoiceSettings, tooltip: 'Настройки голоса'),
           MenuButton(onPressed: _openMenu)
         ],
       ),
@@ -282,7 +285,15 @@ class _TranslatePageState extends State<TranslatePage> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AndroidTextToSpeechButton(text: controller2.text, iconColor: const Color(0xFF0A4B47), iconSize: 30),
+              // AndroidTextToSpeechButton(text: controller2.text, iconColor: const Color(0xFF0A4B47), iconSize: 30), // Старый TTS через нативный Android TTS
+              TtsSpeechButton(  // TTS через API
+                text: controller2.text,
+                iconColor: const Color(0xFF0A4B47),
+                iconSize: 30,
+                onPlayStart: () => debugPrint('🔊 Начало воспроизведения'),
+                onPlayComplete: () => debugPrint('✅ Воспроизведение завершено'),
+                onError: () => debugPrint('❌ Ошибка TTS'),
+              ),
               const SizedBox(width: 8),
               IconButton(
                 padding: EdgeInsets.zero, constraints: const BoxConstraints(),

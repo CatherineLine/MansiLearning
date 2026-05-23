@@ -11,8 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class TtsApiService {
   static const String baseUrl = "https://ethnoportal.admhmao.ru";
 
-  // ПРАВИЛЬНЫЙ endpoint из документации!
-  static const String ttsEndpoint = "/tts";  // ← ВАЖНО! Не /api/tts/synthesize
+  static const String ttsEndpoint = "/api/tts/synthesize";
 
   static String? _sessionCookie;
 
@@ -56,6 +55,83 @@ class TtsApiService {
     ];
   }
 
+  // Future<Uint8List?> synthesize({
+  //   required String text,
+  //   String voiceName = 'irina',
+  //   double speed = 1.0,
+  //   int nfeStep = 32,
+  //   double cfgStrength = 2.0,
+  //   double swaySamplingCoef = -1.0,
+  //   double crossFadeDuration = 0.05,
+  // }) async {
+  //   if (text.trim().isEmpty) {
+  //     debugPrint('❌ Текст не может быть пустым');
+  //     return null;
+  //   }
+
+  //   try {
+  //     final url = Uri.parse('$baseUrl$ttsEndpoint');
+
+  //     final Map<String, dynamic> requestBody = {
+  //       "text": text,
+  //       "voice_name": voiceName,
+  //       "settings": {
+  //         "speed": speed.clamp(0.5, 2.0),
+  //         "nfe_step": nfeStep.clamp(1, 100),
+  //         "cfg_strength": cfgStrength.clamp(0.0, 10.0),
+  //         "sway_sampling_coef": swaySamplingCoef,
+  //         "cross_fade_duration": crossFadeDuration.clamp(0.0, 1.0),
+  //       }
+  //     };
+
+  //     debugPrint('📡 TTS ЗАПРОС (POST $ttsEndpoint)');
+  //     debugPrint('   URL: $url');
+  //     debugPrint('   Текст: $text');
+  //     debugPrint('   Голос: $voiceName');
+  //     debugPrint('   Cookie: ${_sessionCookie != null ? "✅ есть" : "❌ нет"}');
+
+  //     final response = await http.post(
+  //       url,
+  //       headers: _getHeaders(),
+  //       body: json.encode(requestBody),
+  //     ).timeout(const Duration(seconds: 30));
+
+  //     debugPrint('   Статус: ${response.statusCode}');
+  //     debugPrint('   Content-Type: ${response.headers['content-type']}');
+
+  //     if (response.statusCode == 200) {
+  //       final contentType = response.headers['content-type'] ?? '';
+
+  //       // Проверяем, что это аудио (WAV начинается с RIFF)
+  //       final isWav = response.bodyBytes.length > 12 &&
+  //           response.bodyBytes[0] == 0x52 && // 'R'
+  //           response.bodyBytes[1] == 0x49 && // 'I'
+  //           response.bodyBytes[2] == 0x46 && // 'F'
+  //           response.bodyBytes[3] == 0x46;   // 'F'
+
+  //       if (contentType.contains('audio') || isWav) {
+  //         debugPrint('   ✅ АУДИО ПОЛУЧЕНО! Размер: ${response.bodyBytes.length} байт');
+  //         return response.bodyBytes;
+  //       } else {
+  //         debugPrint('   ⚠️ Получен не аудиофайл, тип: $contentType');
+  //         debugPrint('   Первые 200 байт: ${response.bodyBytes.length > 200 ? response.bodyBytes.sublist(0, 200) : response.bodyBytes}');
+  //         return null;
+  //       }
+  //     } else if (response.statusCode == 401 || response.statusCode == 403) {
+  //       debugPrint('   ❌ Ошибка авторизации! Cookie недействителен.');
+  //       return null;
+  //     } else {
+  //       debugPrint('   ❌ Ошибка ${response.statusCode}: ${response.body}');
+  //       return null;
+  //     }
+
+  //   } catch (e) {
+  //     debugPrint('   ❌ Исключение: $e');
+  //     return null;
+  //   }
+  // }
+
+// ----------------------------------------------------------------------
   Future<Uint8List?> synthesize({
     required String text,
     String voiceName = 'irina',
@@ -71,66 +147,84 @@ class TtsApiService {
     }
 
     try {
-      final url = Uri.parse('$baseUrl$ttsEndpoint');
+      // ─────────────────────────────────────────────────────
+      // ШАГ 1: POST /api/tts/synthesize → получаем метаданные
+      // ─────────────────────────────────────────────────────
+      final synthesizeUrl = Uri.parse('$baseUrl$ttsEndpoint');
 
+      // ВАЖНО: camelCase в settings!
       final Map<String, dynamic> requestBody = {
         "text": text,
         "voice_name": voiceName,
         "settings": {
           "speed": speed.clamp(0.5, 2.0),
-          "nfe_step": nfeStep.clamp(1, 100),
-          "cfg_strength": cfgStrength.clamp(0.0, 10.0),
-          "sway_sampling_coef": swaySamplingCoef,
-          "cross_fade_duration": crossFadeDuration.clamp(0.0, 1.0),
+          "nfeStep": nfeStep.clamp(1, 100),           // ← camelCase!
+          "cfgStrength": cfgStrength.clamp(0.0, 10.0), // ← camelCase!
+          "swaySamplingCoef": swaySamplingCoef,
+          "crossFadeDuration": crossFadeDuration.clamp(0.0, 1.0),
         }
       };
 
-      debugPrint('📡 TTS ЗАПРОС (POST $ttsEndpoint)');
-      debugPrint('   URL: $url');
-      debugPrint('   Текст: $text');
-      debugPrint('   Голос: $voiceName');
-      debugPrint('   Cookie: ${_sessionCookie != null ? "✅ есть" : "❌ нет"}');
+      debugPrint('📡 TTS ЗАПРОС: $text');
 
-      final response = await http.post(
-        url,
-        headers: _getHeaders(),
+      final synthesizeResponse = await http.post(
+        synthesizeUrl,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',  // ← Ожидаем JSON, а не аудио!
+          if (_sessionCookie != null && _sessionCookie!.isNotEmpty)
+            'Cookie': _sessionCookie!,
+        },
         body: json.encode(requestBody),
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 60));
 
-      debugPrint('   Статус: ${response.statusCode}');
-      debugPrint('   Content-Type: ${response.headers['content-type']}');
-
-      if (response.statusCode == 200) {
-        final contentType = response.headers['content-type'] ?? '';
-
-        // Проверяем, что это аудио (WAV начинается с RIFF)
-        final isWav = response.bodyBytes.length > 12 &&
-            response.bodyBytes[0] == 0x52 && // 'R'
-            response.bodyBytes[1] == 0x49 && // 'I'
-            response.bodyBytes[2] == 0x46 && // 'F'
-            response.bodyBytes[3] == 0x46;   // 'F'
-
-        if (contentType.contains('audio') || isWav) {
-          debugPrint('   ✅ АУДИО ПОЛУЧЕНО! Размер: ${response.bodyBytes.length} байт');
-          return response.bodyBytes;
-        } else {
-          debugPrint('   ⚠️ Получен не аудиофайл, тип: $contentType');
-          debugPrint('   Первые 200 байт: ${response.bodyBytes.length > 200 ? response.bodyBytes.sublist(0, 200) : response.bodyBytes}');
-          return null;
-        }
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        debugPrint('   ❌ Ошибка авторизации! Cookie недействителен.');
-        return null;
-      } else {
-        debugPrint('   ❌ Ошибка ${response.statusCode}: ${response.body}');
+      if (synthesizeResponse.statusCode != 200) {
+        debugPrint('❌ Ошибка синтеза (${synthesizeResponse.statusCode}): ${synthesizeResponse.body}');
         return null;
       }
 
-    } catch (e) {
-      debugPrint('   ❌ Исключение: $e');
+      // Парсим ответ: { "id": "uuid...", "isAudio": true, ... }
+      final Map<String, dynamic> metadata = json.decode(synthesizeResponse.body);
+      final String? fileId = metadata['id']?.toString();
+      
+      if (fileId == null || fileId.isEmpty) {
+        debugPrint('❌ В ответе нет поля "id". Ответ: $metadata');
+        return null;
+      }
+
+      debugPrint('✅ Получен ID файла: $fileId');
+
+      debugPrint('🍪 Cookie для скачивания: ${_sessionCookie != null ? "✅ есть" : "❌ нет"}');
+
+      // ─────────────────────────────────────────────────────
+      // ШАГ 2: GET /api/files/{id} → скачиваем аудио
+      // ─────────────────────────────────────────────────────
+      final fileUrl = Uri.parse('$baseUrl/api/files/$fileId');
+
+      final fileResponse = await http.get(
+        fileUrl,
+        headers: {
+          'Accept': 'audio/wav, */*',
+          if (_sessionCookie != null && _sessionCookie!.isNotEmpty)
+            'Cookie': _sessionCookie!,
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (fileResponse.statusCode == 200) {
+        debugPrint('✅ АУДИО ПОЛУЧЕНО: ${fileResponse.bodyBytes.length} байт');
+        return fileResponse.bodyBytes;
+      } else {
+        debugPrint('❌ Ошибка скачивания: ${fileResponse.statusCode}');
+        return null;
+      }
+
+    } catch (e, stack) {
+      debugPrint('❌ Исключение: $e');
+      debugPrint('Stack: $stack');
       return null;
     }
   }
+  // ----------------------------------------------------------------------
 }
 
 /// Модель голоса
