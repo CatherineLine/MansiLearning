@@ -7,7 +7,6 @@ import 'package:http/http.dart' as http;
 import '../../main.dart';
 import '../../models/translation_entities.dart';
 import '../../services/app_database.dart';
-//import '../../services/android_tts_service.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_buttons.dart';
 import '../../widgets/mansi_keyboard.dart';
@@ -33,14 +32,11 @@ class _TranslatePageState extends State<TranslatePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isTranslating = false;
 
-  String _selectedLanguage = 'ru-RU';
-  double _speechRate = 0.5;
-  double _speechPitch = 1.0;
-
   @override
   void initState() {
     super.initState();
     _focusNode.addListener(_keyboardListener);
+    TtsAudioPlayer.init();
   }
 
   @override
@@ -50,29 +46,12 @@ class _TranslatePageState extends State<TranslatePage> {
     _focusNode.dispose();
     controller1.dispose();
     controller2.dispose();
-    //AndroidTTSService.dispose();
     super.dispose();
   }
 
   void _keyboardListener() {
     if (mounted) setState(() => _isKeyboardVisible = _focusNode.hasFocus);
   }
-
-  /*void _showVoiceSettings() {
-    if (navigatorKey.currentContext == null) return;
-    showModalBottomSheet(
-      context: navigatorKey.currentContext!,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => AndroidTTSSettingsSheet(
-        selectedLanguage: _selectedLanguage,
-        speechRate: _speechRate,
-        speechPitch: _speechPitch,
-        onLanguageChanged: (lang) { setState(() => _selectedLanguage = lang); AndroidTTSService.setLanguage(lang); },
-        onRateChanged: (rate) { setState(() => _speechRate = rate); AndroidTTSService.setSpeechRate(rate); },
-        onPitchChanged: (pitch) { setState(() => _speechPitch = pitch); AndroidTTSService.setPitch(pitch); },
-      ),
-    );
-  }*/
 
   Future<void> getTranslate(String text) async {
     if (text.trim().isEmpty) {
@@ -119,18 +98,16 @@ class _TranslatePageState extends State<TranslatePage> {
       } else {
         if (mounted) {
           setState(() {
-          controller2.text = 'Ошибка при запросе данных (код ${response.statusCode})';
-          _isTranslating = false;
-        });
+            controller2.text = 'Ошибка при запросе данных (код ${response.statusCode})';
+            _isTranslating = false;
+          });
         }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
+      if (mounted) setState(() {
         controller2.text = 'Ошибка соединения с сервером';
         _isTranslating = false;
       });
-      }
       debugPrint('🌐 Network error: $e');
     }
   }
@@ -182,7 +159,6 @@ class _TranslatePageState extends State<TranslatePage> {
         backgroundColor: const Color(0xFF0A4B47),
         foregroundColor: Colors.white,
         actions: [
-          //IconButton(icon: const Icon(Icons.settings_voice, color: Colors.white, size: 28), onPressed: _showVoiceSettings, tooltip: 'Настройки голоса'),
           MenuButton(onPressed: _openMenu)
         ],
       ),
@@ -267,9 +243,7 @@ class _TranslatePageState extends State<TranslatePage> {
         TextField(controller: controller2, maxLines: 10, readOnly: true, decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.all(16))),
         if (_isTranslating)
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 0, left: 0, right: 0,
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
               child: LinearProgressIndicator(
@@ -285,8 +259,7 @@ class _TranslatePageState extends State<TranslatePage> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              // AndroidTextToSpeechButton(text: controller2.text, iconColor: const Color(0xFF0A4B47), iconSize: 30), // Старый TTS через нативный Android TTS
-              TtsSpeechButton(  // TTS через API
+              TtsSpeechButton(
                 text: controller2.text,
                 iconColor: const Color(0xFF0A4B47),
                 iconSize: 30,
