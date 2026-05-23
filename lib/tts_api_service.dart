@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -10,9 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class TtsApiService {
   static const String baseUrl = "https://ethnoportal.admhmao.ru";
-
   static const String ttsEndpoint = "/api/tts/synthesize";
-
   static String? _sessionCookie;
 
   static Future<void> setSessionCookie(String cookie) async {
@@ -37,17 +36,6 @@ class TtsApiService {
     debugPrint('🗑️ Cookie очищен');
   }
 
-  Map<String, String> _getHeaders() {
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'audio/wav, audio/mpeg, */*',
-    };
-    if (_sessionCookie != null && _sessionCookie!.isNotEmpty) {
-      headers['Cookie'] = _sessionCookie!;
-    }
-    return headers;
-  }
-
   Future<List<TtsVoiceModel>> getVoices() async {
     return [
       TtsVoiceModel(name: 'galina', description: 'Женский голос, Кондина Галина'),
@@ -55,83 +43,6 @@ class TtsApiService {
     ];
   }
 
-  // Future<Uint8List?> synthesize({
-  //   required String text,
-  //   String voiceName = 'irina',
-  //   double speed = 1.0,
-  //   int nfeStep = 32,
-  //   double cfgStrength = 2.0,
-  //   double swaySamplingCoef = -1.0,
-  //   double crossFadeDuration = 0.05,
-  // }) async {
-  //   if (text.trim().isEmpty) {
-  //     debugPrint('❌ Текст не может быть пустым');
-  //     return null;
-  //   }
-
-  //   try {
-  //     final url = Uri.parse('$baseUrl$ttsEndpoint');
-
-  //     final Map<String, dynamic> requestBody = {
-  //       "text": text,
-  //       "voice_name": voiceName,
-  //       "settings": {
-  //         "speed": speed.clamp(0.5, 2.0),
-  //         "nfe_step": nfeStep.clamp(1, 100),
-  //         "cfg_strength": cfgStrength.clamp(0.0, 10.0),
-  //         "sway_sampling_coef": swaySamplingCoef,
-  //         "cross_fade_duration": crossFadeDuration.clamp(0.0, 1.0),
-  //       }
-  //     };
-
-  //     debugPrint('📡 TTS ЗАПРОС (POST $ttsEndpoint)');
-  //     debugPrint('   URL: $url');
-  //     debugPrint('   Текст: $text');
-  //     debugPrint('   Голос: $voiceName');
-  //     debugPrint('   Cookie: ${_sessionCookie != null ? "✅ есть" : "❌ нет"}');
-
-  //     final response = await http.post(
-  //       url,
-  //       headers: _getHeaders(),
-  //       body: json.encode(requestBody),
-  //     ).timeout(const Duration(seconds: 30));
-
-  //     debugPrint('   Статус: ${response.statusCode}');
-  //     debugPrint('   Content-Type: ${response.headers['content-type']}');
-
-  //     if (response.statusCode == 200) {
-  //       final contentType = response.headers['content-type'] ?? '';
-
-  //       // Проверяем, что это аудио (WAV начинается с RIFF)
-  //       final isWav = response.bodyBytes.length > 12 &&
-  //           response.bodyBytes[0] == 0x52 && // 'R'
-  //           response.bodyBytes[1] == 0x49 && // 'I'
-  //           response.bodyBytes[2] == 0x46 && // 'F'
-  //           response.bodyBytes[3] == 0x46;   // 'F'
-
-  //       if (contentType.contains('audio') || isWav) {
-  //         debugPrint('   ✅ АУДИО ПОЛУЧЕНО! Размер: ${response.bodyBytes.length} байт');
-  //         return response.bodyBytes;
-  //       } else {
-  //         debugPrint('   ⚠️ Получен не аудиофайл, тип: $contentType');
-  //         debugPrint('   Первые 200 байт: ${response.bodyBytes.length > 200 ? response.bodyBytes.sublist(0, 200) : response.bodyBytes}');
-  //         return null;
-  //       }
-  //     } else if (response.statusCode == 401 || response.statusCode == 403) {
-  //       debugPrint('   ❌ Ошибка авторизации! Cookie недействителен.');
-  //       return null;
-  //     } else {
-  //       debugPrint('   ❌ Ошибка ${response.statusCode}: ${response.body}');
-  //       return null;
-  //     }
-
-  //   } catch (e) {
-  //     debugPrint('   ❌ Исключение: $e');
-  //     return null;
-  //   }
-  // }
-
-// ----------------------------------------------------------------------
   Future<Uint8List?> synthesize({
     required String text,
     String voiceName = 'irina',
@@ -145,35 +56,27 @@ class TtsApiService {
       debugPrint('❌ Текст не может быть пустым');
       return null;
     }
-
     try {
-      // ─────────────────────────────────────────────────────
-      // ШАГ 1: POST /api/tts/synthesize → получаем метаданные
-      // ─────────────────────────────────────────────────────
       final synthesizeUrl = Uri.parse('$baseUrl$ttsEndpoint');
-
-      // ВАЖНО: camelCase в settings!
       final Map<String, dynamic> requestBody = {
         "text": text,
         "voice_name": voiceName,
         "settings": {
           "speed": speed.clamp(0.5, 2.0),
-          "nfeStep": nfeStep.clamp(1, 100),           // ← camelCase!
-          "cfgStrength": cfgStrength.clamp(0.0, 10.0), // ← camelCase!
+          "nfeStep": nfeStep.clamp(1, 100),
+          "cfgStrength": cfgStrength.clamp(0.0, 10.0),
           "swaySamplingCoef": swaySamplingCoef,
           "crossFadeDuration": crossFadeDuration.clamp(0.0, 1.0),
         }
       };
 
       debugPrint('📡 TTS ЗАПРОС: $text');
-
       final synthesizeResponse = await http.post(
         synthesizeUrl,
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',  // ← Ожидаем JSON, а не аудио!
-          if (_sessionCookie != null && _sessionCookie!.isNotEmpty)
-            'Cookie': _sessionCookie!,
+          'Accept': 'application/json',
+          if (_sessionCookie != null && _sessionCookie!.isNotEmpty) 'Cookie': _sessionCookie!,
         },
         body: json.encode(requestBody),
       ).timeout(const Duration(seconds: 60));
@@ -183,10 +86,8 @@ class TtsApiService {
         return null;
       }
 
-      // Парсим ответ: { "id": "uuid...", "isAudio": true, ... }
       final Map<String, dynamic> metadata = json.decode(synthesizeResponse.body);
       final String? fileId = metadata['id']?.toString();
-      
       if (fileId == null || fileId.isEmpty) {
         debugPrint('❌ В ответе нет поля "id". Ответ: $metadata');
         return null;
@@ -194,19 +95,12 @@ class TtsApiService {
 
       debugPrint('✅ Получен ID файла: $fileId');
 
-      debugPrint('🍪 Cookie для скачивания: ${_sessionCookie != null ? "✅ есть" : "❌ нет"}');
-
-      // ─────────────────────────────────────────────────────
-      // ШАГ 2: GET /api/files/{id} → скачиваем аудио
-      // ─────────────────────────────────────────────────────
       final fileUrl = Uri.parse('$baseUrl/api/files/$fileId');
-
       final fileResponse = await http.get(
         fileUrl,
         headers: {
           'Accept': 'audio/wav, */*',
-          if (_sessionCookie != null && _sessionCookie!.isNotEmpty)
-            'Cookie': _sessionCookie!,
+          if (_sessionCookie != null && _sessionCookie!.isNotEmpty) 'Cookie': _sessionCookie!,
         },
       ).timeout(const Duration(seconds: 30));
 
@@ -217,70 +111,77 @@ class TtsApiService {
         debugPrint('❌ Ошибка скачивания: ${fileResponse.statusCode}');
         return null;
       }
-
     } catch (e, stack) {
       debugPrint('❌ Исключение: $e');
       debugPrint('Stack: $stack');
       return null;
     }
   }
-  // ----------------------------------------------------------------------
 }
 
-/// Модель голоса
 class TtsVoiceModel {
   final String name;
   final String description;
-
-  TtsVoiceModel({
-    required this.name,
-    required this.description,
-  });
+  TtsVoiceModel({required this.name, required this.description});
 }
 
-/// Менеджер аудиоплеера
+/// ✅ Исправленный менеджер аудиоплеера
 class TtsAudioPlayer {
   static final AudioPlayer _player = AudioPlayer();
   static bool _isPlaying = false;
   static String? _currentText;
+  static StreamSubscription? _stateSubscription;
+  static File? _currentTempFile;
 
   static Future<void> init() async {
     try {
       final session = await AudioSession.instance;
       await session.configure(AudioSessionConfiguration.speech());
+
+      // ✅ Подписываемся ОДИН раз
+      await _stateSubscription?.cancel();
+      _stateSubscription = _player.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed) {
+          _isPlaying = false;
+          _currentText = null;
+          debugPrint('🎵 Воспроизведение завершено');
+        }
+      });
+
       debugPrint('🎵 Аудиосессия инициализирована');
     } catch (e) {
-      debugPrint('Ошибка инициализации аудиосессии: $e');
+      debugPrint('Ошибка инициализации: $e');
     }
   }
 
   static Future<void> play(Uint8List audioBytes, {String? text}) async {
     try {
-      await stop();
+      await stop(); // ✅ Очищаем предыдущее воспроизведение
+
       _currentText = text;
 
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = await File('${tempDir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.wav')
-          .writeAsBytes(audioBytes);
+      // ✅ Удаляем старый файл
+      if (_currentTempFile != null) {
+        try { await _currentTempFile!.delete(); } catch(e) {}
+      }
 
-      final source = AudioSource.file(tempFile.path);
-      await _player.setAudioSource(source);
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.wav');
+      await tempFile.writeAsBytes(audioBytes);
+      _currentTempFile = tempFile;
+
+      await _player.setAudioSource(AudioSource.file(tempFile.path));
       await _player.play();
       _isPlaying = true;
       debugPrint('🎵 Воспроизведение началось');
-
-      _player.playerStateStream.listen((state) {
-        if (state.processingState == ProcessingState.completed) {
-          _isPlaying = false;
-          _currentText = null;
-          tempFile.delete();
-          debugPrint('🎵 Воспроизведение завершено');
-        }
-      });
     } catch (e) {
       debugPrint('Ошибка воспроизведения: $e');
       _isPlaying = false;
       _currentText = null;
+      if (_currentTempFile != null) {
+        try { await _currentTempFile!.delete(); } catch(e) {}
+        _currentTempFile = null;
+      }
     }
   }
 
@@ -298,11 +199,18 @@ class TtsAudioPlayer {
   static String? get currentText => _currentText;
 
   static void dispose() {
+    _stateSubscription?.cancel();
     _player.dispose();
+    _isPlaying = false;
+    _currentText = null;
+    if (_currentTempFile != null) {
+      try { _currentTempFile!.deleteSync(); } catch(e) {}
+      _currentTempFile = null;
+    }
   }
 }
 
-/// Кнопка озвучивания текста
+/// ✅ Исправленная кнопка озвучивания
 class TtsSpeechButton extends StatefulWidget {
   final String text;
   final Color? iconColor;
@@ -329,6 +237,7 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
   final TtsApiService _ttsService = TtsApiService();
   bool _isSynthesizing = false;
   bool _isPlaying = false;
+  Timer? _pollingTimer; // ✅ Таймер для безопасной отмены
 
   @override
   void initState() {
@@ -336,7 +245,15 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
     _checkPlaybackStatus();
   }
 
+  @override
+  void dispose() {
+    _pollingTimer?.cancel(); // ✅ Отменяем таймер при удалении виджета
+    super.dispose();
+  }
+
   void _checkPlaybackStatus() {
+    if (!mounted) return;
+
     if (TtsAudioPlayer.isPlaying && TtsAudioPlayer.currentText == widget.text) {
       if (!_isPlaying) {
         setState(() => _isPlaying = true);
@@ -345,7 +262,9 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
       setState(() => _isPlaying = false);
       widget.onPlayComplete?.call();
     }
-    Future.delayed(const Duration(milliseconds: 500), _checkPlaybackStatus);
+
+    // ✅ Сохраняем ссылку на таймер
+    _pollingTimer = Timer(const Duration(milliseconds: 500), _checkPlaybackStatus);
   }
 
   Future<void> _speak() async {
@@ -359,8 +278,9 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
 
     try {
       final audioBytes = await _ttsService.synthesize(text: widget.text);
+      if (!mounted) return;
 
-      if (audioBytes != null && mounted) {
+      if (audioBytes != null) {
         await TtsAudioPlayer.play(audioBytes, text: widget.text);
         if (mounted) {
           setState(() => _isPlaying = true);
@@ -383,6 +303,7 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
   }
 
   void _showMessage(String message, {required bool isError}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -432,7 +353,6 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
   }
 }
 
-/// Виджет настроек голоса
 class TtsVoiceSettingsSheet extends StatefulWidget {
   final String selectedVoice;
   final double speechSpeed;
@@ -472,7 +392,6 @@ class _TtsVoiceSettingsSheetState extends State<TtsVoiceSettingsSheet> {
       _isLoading = true;
       _error = null;
     });
-
     try {
       final voices = await _ttsService.getVoices();
       setState(() {
