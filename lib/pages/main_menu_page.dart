@@ -1,30 +1,26 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../models/phrasebook_entities.dart' as pb;
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
 import 'document_translation_page.dart';
 import 'module_levels_page.dart';
 import 'riddle_page.dart';
 
-class MainMenuPage extends StatelessWidget {
-  final List<Map<String, dynamic>> modules = [
-    {'id': 1, 'title': 'Фонетика мансийского языка'},
-    {'id': 2, 'title': 'Грамматика (число и местоимения)'},
-    {'id': 3, 'title': 'Лексика (термины родства)'},
-    {'id': 4, 'title': 'Предложения с именным сказуемым'},
-    {'id': 5, 'title': 'Разговорная тема "Знакомство"'},
-    {'id': 6, 'title': 'Суффиксы прилагательных'},
-    {'id': 7, 'title': 'Уменьшительные суффиксы'},
-    {'id': 8, 'title': 'Притяжательное склонение'},
-    {'id': 9, 'title': 'Местный падеж'},
-    {'id': 10, 'title': 'Предложения наличия и местонахождения'},
-  ];
+class MainMenuPage extends StatefulWidget {
+  const MainMenuPage({super.key});
 
+  @override
+  State<MainMenuPage> createState() => _MainMenuPageState();
+}
+
+class _MainMenuPageState extends State<MainMenuPage> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+  late Future<List<Map<String, dynamic>>> _modulesFuture;
 
-  MainMenuPage({super.key});
+  @override
+  void initState() {
+    super.initState();
+    _modulesFuture = AppDatabase.instance.getModules();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,9 +57,24 @@ class MainMenuPage extends StatelessWidget {
             const Text('Выберите модуль:', style: TextStyle(fontSize: 18)),
             const SizedBox(height: 10),
             Expanded(
-              child: ListView.builder(
-                itemCount: modules.length,
-                itemBuilder: (context, index) => _buildModuleItem(context, modules[index]),
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _modulesFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Ошибка: ${snapshot.error}'));
+                  }
+                  final modules = snapshot.data ?? [];
+                  if (modules.isEmpty) {
+                    return const Center(child: Text('Модули не найдены'));
+                  }
+                  return ListView.builder(
+                    itemCount: modules.length,
+                    itemBuilder: (context, index) => _buildModuleItem(context, modules[index]),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 20),
@@ -91,30 +102,38 @@ class MainMenuPage extends StatelessWidget {
     );
   }
 
-
   Widget _buildModuleItem(BuildContext context, Map<String, dynamic> module) {
-    return FutureBuilder<List<pb.UserProgress>>(
-      future: AppDatabase.instance.getUserProgress(1),
-      builder: (context, snapshot) {
-        final progress = snapshot.data ?? [];
-        final moduleProgress = progress.where((p) => p.sourceContext == 'task').toList();
-        final completed = moduleProgress.isNotEmpty;
+    final moduleId = module['id'] as int? ?? 0;
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: AppDatabase.instance.getModuleLevels(moduleId),
+      builder: (context, levelsSnapshot) {
+        if (levelsSnapshot.connectionState == ConnectionState.waiting) {
+          return ListTile(
+            title: Text(module['title'] ?? ''),
+            trailing: const CircularProgressIndicator(),
+          );
+        }
+
+        final levels = levelsSnapshot.data ?? [];
+        final hasLevels = levels.isNotEmpty;
 
         return ListTile(
-          title: Text(module['title']),
-          subtitle: completed ? const Text('Пройден') : const Text('В процессе'),
+          title: Text(module['title'] ?? ''),
+          subtitle: Text(hasLevels ? '${levels.length} уровней' : 'Нет уровней'),
           trailing: const Icon(Icons.arrow_forward),
-          onTap: () {
+          onTap: hasLevels
+              ? () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => ModuleLevelsPage(
-                  moduleId: module['id'],
-                  moduleTitle: module['title'],
+                  moduleId: moduleId,
+                  moduleTitle: module['title'] ?? '',
                 ),
               ),
             );
-          },
+          }
+              : null,
         );
       },
     );
@@ -122,29 +141,30 @@ class MainMenuPage extends StatelessWidget {
 
   Widget _buildRiddleButton() {
     return FutureBuilder<int>(
-      future: AppDatabase.instance.getCompletedRiddlesCount(1),
-      builder: (context, snapshot) {
-        final solved = snapshot.data ?? 0;
-        final nextRiddleNumber = solved + 1;
-        final neededScore = nextRiddleNumber * 100;
+      future: AppDatabase.instance.getUserTotalScore(1),
+      builder: (context, scoreSnapshot) {
+        final totalScore = scoreSnapshot.data ?? 0;
+
         return FutureBuilder<int>(
-          future: AppDatabase.instance.getUserTotalScore(1),
-          builder: (context, scoreSnapshot) {
-            final totalScore = scoreSnapshot.data ?? 0;
+          future: AppDatabase.instance.getCompletedRiddlesCount(1),
+          builder: (context, riddleSnapshot) {
+            final solved = riddleSnapshot.data ?? 0;
+            final nextRiddleNumber = solved + 1;
+            final neededScore = nextRiddleNumber * 100;
+            final canOpen = totalScore >= neededScore;
+
             return ListTile(
-              tileColor: Colors.green[100],
+              tileColor: canOpen ? Colors.green[100] : Colors.grey[200],
               title: const Text('Решить загадку'),
-              subtitle: Text('Загадка №$nextRiddleNumber (доступно при $neededScore очках)'),
+              subtitle: Text(
+                canOpen
+                    ? 'Загадка №$nextRiddleNumber (доступно)'
+                    : 'Загадка №$nextRiddleNumber (нужно $neededScore очков, сейчас: $totalScore)',
+              ),
               trailing: const Icon(Icons.arrow_forward),
-              onTap: () async {
-                if (totalScore >= neededScore) {
-                  _openRiddlePage(context, solved);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Нужно ещё ${neededScore - totalScore} очков (сейчас: $totalScore)')),
-                  );
-                }
-              },
+              onTap: canOpen
+                  ? () => _openRiddlePage(context, solved, totalScore)
+                  : null,
             );
           },
         );
@@ -152,44 +172,33 @@ class MainMenuPage extends StatelessWidget {
     );
   }
 
-  Future<void> _openRiddlePage(BuildContext context, int solvedRiddles) async {
-    final data = await loadRiddles();
-    final progressData = await AppDatabase.instance.getRiddleProgress(1, solvedRiddles + 1);
-    final totalScore = progressData?.score ?? 0;
-    final nextRequiredScore = (solvedRiddles + 1) * 100;
-    if (totalScore >= nextRequiredScore || true) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => RiddlePage(
-            riddleIndex: solvedRiddles,
-            userScore: totalScore,
-            riddles: data['riddles'],
-          ),
-        ),
+  Future<void> _openRiddlePage(BuildContext context, int solvedRiddles, int totalScore) async {
+    final data = await AppDatabase.instance.loadRiddles();
+    final riddles = data['riddles'] as List<Map<String, dynamic>>? ?? [];
+
+    if (riddles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Загадки не найдены')),
       );
+      return;
     }
-  }
 
-}
-
-Future<Map<String, dynamic>> loadRiddles() async {
-  try {
-    final String jsonString = await rootBundle.loadString('assets/riddles.json');
-    final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
-    if (jsonMap.containsKey('riddles')) {
-      final riddles = jsonMap['riddles'];
-      if (riddles is List) {
-        return {
-          'riddles': List<Map<String, dynamic>>.from(
-              riddles.map((r) => r as Map<String, dynamic>)
-          )
-        };
-      }
+    if (solvedRiddles >= riddles.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Вы решили все загадки!')),
+      );
+      return;
     }
-    throw Exception('Неверный формат riddles.json');
-  } catch (e) {
-    print('Ошибка загрузки riddles.json: $e');
-    return {'riddles': []};
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RiddlePage(
+          riddleIndex: solvedRiddles,
+          userScore: totalScore,
+          riddles: riddles,
+        ),
+      ),
+    );
   }
 }

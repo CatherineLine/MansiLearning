@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
@@ -125,7 +127,6 @@ class TtsVoiceModel {
   TtsVoiceModel({required this.name, required this.description});
 }
 
-/// ✅ Исправленный менеджер аудиоплеера
 class TtsAudioPlayer {
   static final AudioPlayer _player = AudioPlayer();
   static bool _isPlaying = false;
@@ -138,7 +139,6 @@ class TtsAudioPlayer {
       final session = await AudioSession.instance;
       await session.configure(AudioSessionConfiguration.speech());
 
-      // ✅ Подписываемся ОДИН раз
       await _stateSubscription?.cancel();
       _stateSubscription = _player.playerStateStream.listen((state) {
         if (state.processingState == ProcessingState.completed) {
@@ -156,32 +156,51 @@ class TtsAudioPlayer {
 
   static Future<void> play(Uint8List audioBytes, {String? text}) async {
     try {
-      await stop(); // ✅ Очищаем предыдущее воспроизведение
-
+      await stop();
       _currentText = text;
+      if (kIsWeb) {
+        final blob = web.Blob(
+          [audioBytes] as JSArray<web.BlobPart>,
+          web.BlobPropertyBag(type: 'audio/wav'),
+        );
+        final url = web.URL.createObjectURL(blob);
 
-      // ✅ Удаляем старый файл
-      if (_currentTempFile != null) {
-        try { await _currentTempFile!.delete(); } catch(e) {}
+        await _player.setAudioSource(AudioSource.uri(url as Uri));
+        await _player.play();
+        _isPlaying = true;
+        debugPrint('🎵 Воспроизведение началось (web)');
+
+        _player.playerStateStream.listen((state) {
+          if (state.processingState == ProcessingState.completed) {
+            _isPlaying = false;
+            _currentText = null;
+            web.URL.revokeObjectURL(url);
+            debugPrint('🎵 Воспроизведение завершено');
+          }
+        });
+      } else {
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.wav');
+        await tempFile.writeAsBytes(audioBytes);
+
+        await _player.setAudioSource(AudioSource.file(tempFile.path));
+        await _player.play();
+        _isPlaying = true;
+        debugPrint('🎵 Воспроизведение началось');
+
+        _player.playerStateStream.listen((state) {
+          if (state.processingState == ProcessingState.completed) {
+            _isPlaying = false;
+            _currentText = null;
+            tempFile.delete();
+            debugPrint('🎵 Воспроизведение завершено');
+          }
+        });
       }
-
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.wav');
-      await tempFile.writeAsBytes(audioBytes);
-      _currentTempFile = tempFile;
-
-      await _player.setAudioSource(AudioSource.file(tempFile.path));
-      await _player.play();
-      _isPlaying = true;
-      debugPrint('🎵 Воспроизведение началось');
     } catch (e) {
       debugPrint('Ошибка воспроизведения: $e');
       _isPlaying = false;
       _currentText = null;
-      if (_currentTempFile != null) {
-        try { await _currentTempFile!.delete(); } catch(e) {}
-        _currentTempFile = null;
-      }
     }
   }
 
@@ -210,7 +229,6 @@ class TtsAudioPlayer {
   }
 }
 
-/// ✅ Исправленная кнопка озвучивания
 class TtsSpeechButton extends StatefulWidget {
   final String text;
   final Color? iconColor;

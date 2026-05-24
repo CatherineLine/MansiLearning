@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/custom_buttons.dart';
@@ -52,7 +51,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     finally { if (mounted) setState(() => _isClearing = false); }
   }
 
-  // Способ 2: Экспорт в видимую папку Downloads (с адаптивным дизайном)
+
   Future<void> _exportToDocuments(BuildContext context) async {
     if (!mounted) return;
     setState(() => _isExporting = true);
@@ -259,6 +258,19 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _getSafeTranslationHistory() async {
+    try {
+      return await AppDatabase.instance.getTranslationHistory(
+        startDate: _startDate,
+        endDate: _endDate,
+        searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+      );
+    } catch (e) {
+      debugPrint('❌ Ошибка получения истории: $e');
+      return [];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -419,21 +431,50 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           )),
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: AppDatabase.instance.getTranslationHistory(
-                startDate: _startDate,
-                endDate: _endDate,
-                searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
-              ),
+              future: _getSafeTranslationHistory(),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  debugPrint('❌ Ошибка: ${snapshot.error}');
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'История временно недоступна',
+                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'SQLite не поддерживается в веб-версии',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Ошибка: ${snapshot.error}'));
-                }
+
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('История переводов пуста'));
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.history, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'История переводов пуста',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
                 }
+
                 return ListView.builder(
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
@@ -486,3 +527,4 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     );
   }
 }
+

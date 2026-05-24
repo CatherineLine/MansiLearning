@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import '../services/app_database.dart';
 import 'translate_page.dart';
@@ -37,13 +36,20 @@ class _RiddlePageState extends State<RiddlePage> {
       _answerChecked = true;
       if (_selectedAnswer == currentRiddle['correct_answer']) {
         _showSuccess = true;
-        AppDatabase.instance.saveRiddleProgress(1, widget.riddleIndex + 1, true, widget.userScore + 100);
+        // Сохраняем прогресс
+        AppDatabase.instance.saveRiddleProgress(
+          1,
+          widget.riddleIndex + 1,
+          true,
+          widget.userScore + 100,
+        );
       }
     });
   }
 
   void _nextRiddle(BuildContext context) {
-    if (widget.riddleIndex < widget.riddles.length - 1 && _selectedAnswer == currentRiddle['correct_answer']) {
+    if (widget.riddleIndex < widget.riddles.length - 1 &&
+        _selectedAnswer == currentRiddle['correct_answer']) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -61,7 +67,10 @@ class _RiddlePageState extends State<RiddlePage> {
           title: const Text('Поздравляем!'),
           content: const Text('Вы решили все загадки!'),
           actions: [
-            TextButton(onPressed: Navigator.of(context).pop, child: const Text('OK')),
+            TextButton(
+              onPressed: Navigator.of(context).pop,
+              child: const Text('OK'),
+            ),
           ],
         ),
       );
@@ -73,7 +82,7 @@ class _RiddlePageState extends State<RiddlePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,  // Добавить ключ
+      key: _scaffoldKey,
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -96,9 +105,10 @@ class _RiddlePageState extends State<RiddlePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Загадка №${widget.riddleIndex + 1}', style: const TextStyle(fontSize: 20)),
+            Text('Загадка №${widget.riddleIndex + 1}',
+                style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 10),
-            Text(currentRiddle['question']),
+            Text(currentRiddle['question_text'] ?? currentRiddle['question'] ?? ''),
             const SizedBox(height: 20),
             ...List<Widget>.from(
               (List<String>.from(currentRiddle['options'] ?? [])).map((option) {
@@ -106,7 +116,9 @@ class _RiddlePageState extends State<RiddlePage> {
                   title: Text(option),
                   value: option,
                   groupValue: _selectedAnswer,
-                  onChanged: _answerChecked ? null : (value) => setState(() => _selectedAnswer = value),
+                  onChanged: _answerChecked
+                      ? null
+                      : (value) => setState(() => _selectedAnswer = value),
                 );
               }),
             ),
@@ -142,17 +154,26 @@ class _RiddlePageState extends State<RiddlePage> {
           padding: EdgeInsets.zero,
           children: [
             ListTile(
-              title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
+              title: const Text('Переводчик',
+                  style: TextStyle(fontSize: 20, color: Colors.black)),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const TranslatePage())),
             ),
             const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
-              title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
+              title: const Text('Обучение',
+                  style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const MainMenuPage())),
             ),
             const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
-              title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
+              title: const Text('История переводов',
+                  style: TextStyle(fontSize: 20, color: Colors.black)),
               onTap: () {},
             ),
           ],
