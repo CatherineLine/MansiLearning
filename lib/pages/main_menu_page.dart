@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
 import 'document_translation_page.dart';
@@ -173,7 +176,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
   }
 
   Future<void> _openRiddlePage(BuildContext context, int solvedRiddles, int totalScore) async {
-    final data = await AppDatabase.instance.loadRiddles();
+    final data = await loadRiddles();
     final riddles = data['riddles'] as List<Map<String, dynamic>>? ?? [];
 
     if (riddles.isEmpty) {
@@ -200,5 +203,27 @@ class _MainMenuPageState extends State<MainMenuPage> {
         ),
       ),
     );
+  }
+
+  Future<Map<String, dynamic>> loadRiddles() async {
+    try {
+      final String jsonString = await rootBundle.loadString('assets/riddles.json');
+      final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
+      if (jsonMap.containsKey('riddles')) {
+        final riddles = jsonMap['riddles'];
+        if (riddles is List) {
+          return {
+            'riddles': List<Map<String, dynamic>>.from(
+                riddles.map((r) => r as Map<String, dynamic>)
+            )
+          };
+        }
+      }
+      throw Exception('Неверный формат riddles.json');
+    } catch (e) {
+      debugPrint('❌ Ошибка загрузки riddles.json: $e');
+      final dbRiddles = await AppDatabase.instance.getRiddles();
+      return {'riddles': dbRiddles};
+    }
   }
 }

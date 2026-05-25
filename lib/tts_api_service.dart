@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:js_interop';
-import 'package:web/web.dart' as web;
+//import 'dart:js_interop';
+//import 'package:web/web.dart' as web;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -158,7 +158,7 @@ class TtsAudioPlayer {
     try {
       await stop();
       _currentText = text;
-      if (kIsWeb) {
+      /*if (kIsWeb) {
         final blob = web.Blob(
           [audioBytes] as JSArray<web.BlobPart>,
           web.BlobPropertyBag(type: 'audio/wav'),
@@ -178,7 +178,7 @@ class TtsAudioPlayer {
             debugPrint('🎵 Воспроизведение завершено');
           }
         });
-      } else {
+      } else */{
         final tempDir = await getTemporaryDirectory();
         final tempFile = File('${tempDir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.wav');
         await tempFile.writeAsBytes(audioBytes);

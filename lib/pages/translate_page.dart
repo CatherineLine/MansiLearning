@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:Mansi_Translator/models/translation_entities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -70,7 +71,7 @@ class _TranslatePageState extends State<TranslatePage> {
             'session_id': 1, 'source_text': text, 'target_text': translatedText,
             'source_lang': _isSwapped ? 'mansi' : 'ru', 'target_lang': _isSwapped ? 'ru' : 'mansi',
             'is_favorite': 0, 'created_at': DateTime.now().toIso8601String()
-          });
+          } as Translation);
         } catch (dbError) {
           debugPrint('⚠️ Ошибка сохранения истории: $dbError');
         }

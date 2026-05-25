@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart' as sqlite;
 import 'package:path/path.dart' as path;
-import 'package:hive_flutter/hive_flutter.dart';
+//import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
 
 abstract class DatabaseProvider {
@@ -370,7 +370,6 @@ class SqliteDatabaseProvider implements DatabaseProvider {
 
   @override
   Future<Map<String, dynamic>> loadRiddlesFromAssets() async {
-    // Для SQLite загадки хранятся в БД, возвращаем их
     final riddles = await _db!.query('riddles');
     return {'riddles': riddles};
   }
@@ -381,8 +380,7 @@ class SqliteDatabaseProvider implements DatabaseProvider {
   }
 }
 
-/// Реализация для веба (Hive)
-class HiveDatabaseProvider implements DatabaseProvider {
+/*class HiveDatabaseProvider implements DatabaseProvider {
   late Box _box;
   static const String _translationsKey = 'translations';
   static const String _progressKey = 'progress';
@@ -735,4 +733,4 @@ DatabaseProvider createDatabaseProvider() {
   } else {
     return SqliteDatabaseProvider();
   }
-}
+}*/

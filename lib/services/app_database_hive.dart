@@ -1,4 +1,4 @@
-import 'package:hive_flutter/hive_flutter.dart';
+/*import 'package:hive_flutter/hive_flutter.dart';
 import '../models/translation_entities.dart' as te;
 
 class AppDatabaseHive {
@@ -186,4 +186,4 @@ class AppDatabaseHive {
     await _box?.close();
     _box = null;
   }
-}
+}*/

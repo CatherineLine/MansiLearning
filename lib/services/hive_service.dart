@@ -1,4 +1,4 @@
-import 'package:hive_flutter/hive_flutter.dart';
+/*import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
 
 class HiveService {
@@ -80,4 +80,4 @@ class HiveService {
   static Future<void> close() async {
     await _box.close();
   }
-}
+}*/
