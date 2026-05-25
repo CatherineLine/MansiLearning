@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sembast/blob.dart' as html;
 import 'package:share_plus/share_plus.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
@@ -52,7 +53,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     finally { if (mounted) setState(() => _isClearing = false); }
   }
 
-  // Способ 2: Экспорт в видимую папку Downloads (с адаптивным дизайном)
+  // Способ 2: Экспорт в документы
   Future<void> _exportToDocuments(BuildContext context) async {
     if (!mounted) return;
     setState(() => _isExporting = true);
@@ -61,105 +62,51 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       final exportData = await AppDatabase.instance.exportAllData();
       final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
 
-      if (jsonString.isEmpty) {
-        throw Exception('Нет данных для экспорта');
-      }
-
       final now = DateTime.now();
       final fileName = 'mansi_backup_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}.json';
 
-      Directory targetDir;
-      try {
-        targetDir = Directory('/storage/emulated/0/Download');
-        if (!await targetDir.exists()) {
-          await targetDir.create(recursive: true);
+      // Для Android используем папку Documents
+      Directory saveDir;
+      if (Platform.isAndroid) {
+        saveDir = Directory('/storage/emulated/0/Documents/MansiTranslator');
+        if (!await saveDir.exists()) {
+          await saveDir.create(recursive: true);
         }
-      } catch (_) {
-        targetDir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
+      } else {
+        final docsDir = await getApplicationDocumentsDirectory();
+        saveDir = docsDir;
       }
 
-      final filePath = '${targetDir.path}/$fileName';
-      final file = File(filePath);
+      final file = File('${saveDir.path}/$fileName');
       await file.writeAsString(jsonString);
 
       if (mounted) {
         showDialog(
           context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) => AlertDialog(
-            backgroundColor: const Color(0xFFE7E4DF),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: const Color(0xFF0A4B47)),
-                const SizedBox(width: 8),
-                const Text('Файл сохранён!', style: TextStyle(color: Color(0xFF0A4B47))),
-              ],
-            ),
+          builder: (ctx) => AlertDialog(
+            title: const Text('Файл сохранён'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Путь к файлу:', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+                Text('Папка: ${saveDir.path}'),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: SelectableText(
-                    filePath,
-                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.black87),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        filePath.contains('Download')
-                            ? 'Файл находится в папке "Загрузки" вашего телефона.'
-                            : 'Файл сохранён в папку Android/data/com.example.translearn/files/',
-                        style: const TextStyle(fontSize: 12, color: Colors.black54),
-                      ),
-                    ),
-                  ],
-                ),
+                SelectableText(fileName),
               ],
             ),
             actions: [
-              TextButton.icon(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: filePath));
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Row(children: [Icon(Icons.check, color: Colors.white, size: 18), SizedBox(width: 8), Text('Путь скопирован')]),
-                      backgroundColor: const Color(0xFF0A4B47),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.copy, size: 18),
-                label: const Text('Копировать путь'),
-                style: TextButton.styleFrom(foregroundColor: const Color(0xFF0A4B47)),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0A4B47),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                child: const Text('Закрыть'),
+              TextButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: file.path));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Путь скопирован')),
+                  );
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Копировать путь'),
               ),
             ],
           ),
@@ -168,10 +115,9 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red[700]),
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
         );
       }
-      debugPrint('Export error: $e');
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
