@@ -17,7 +17,7 @@ class MainMenuPage extends StatefulWidget {
 
 class _MainMenuPageState extends State<MainMenuPage> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-  late Future<List<Module>> _modulesFuture; // ✅ Исправлено: List<Module> вместо List<Map>
+  late Future<List<Module>> _modulesFuture;
 
   @override
   void initState() {
