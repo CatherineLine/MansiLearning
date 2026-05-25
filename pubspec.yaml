@@ -33,6 +33,7 @@ dependencies:
   syncfusion_flutter_pdf: ^24.1.41
   pdf: ^3.10.7
   share_plus: ^7.2.1
+  audioplayers: ^6.0.0
 
   cupertino_icons: ^1.0.8
 
@@ -48,5 +49,8 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/riddles.json
+    - assets/audio/phonetics/
+    - assets/audio/morphology/
+    - assets/audio/exercises/
 
   uses-material-design: true
