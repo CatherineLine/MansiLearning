@@ -54,6 +54,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
   }
 
   // Способ 2: Экспорт в документы
+// Замените метод _exportToDocuments на этот:
   Future<void> _exportToDocuments(BuildContext context) async {
     if (!mounted) return;
     setState(() => _isExporting = true);
@@ -63,56 +64,37 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       final jsonString = const JsonEncoder.withIndent('  ').convert(exportData);
 
       final now = DateTime.now();
-      final fileName = 'mansi_backup_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}.json';
+      final fileName = 'mansi_backup_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}.json';
 
-      // Для Android используем папку Documents
-      Directory saveDir;
+      // Получаем директорию для сохранения
+      Directory? saveDir;
+
       if (Platform.isAndroid) {
-        saveDir = Directory('/storage/emulated/0/Documents/MansiTranslator');
+        // Для Android используем public Downloads
+        saveDir = Directory('/storage/emulated/0/Download/MansiTranslator');
         if (!await saveDir.exists()) {
           await saveDir.create(recursive: true);
         }
+      } else if (Platform.isIOS) {
+        saveDir = await getApplicationDocumentsDirectory();
       } else {
-        final docsDir = await getApplicationDocumentsDirectory();
-        saveDir = docsDir;
+        saveDir = await getApplicationDocumentsDirectory();
       }
 
-      final file = File('${saveDir.path}/$fileName');
-      await file.writeAsString(jsonString);
+      final saveFile = File('${saveDir.path}/$fileName');
+      await saveFile.writeAsString(jsonString, encoding: utf8);
 
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Файл сохранён'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Папка: ${saveDir.path}'),
-                const SizedBox(height: 8),
-                SelectableText(fileName),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: file.path));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Путь скопирован')),
-                  );
-                  Navigator.pop(ctx);
-                },
-                child: const Text('Копировать путь'),
-              ),
-            ],
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Файл сохранён: ${saveFile.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
+      debugPrint('Ошибка экспорта: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
