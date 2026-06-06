@@ -81,8 +81,50 @@ class AppDatabase {
     if (oldVersion < 4) {
       try {
         await db.execute('ALTER TABLE translations ADD COLUMN created_at TEXT');
+        await db.execute('ALTER TABLE translations ADD COLUMN is_favorite INTEGER DEFAULT 0');
       } catch (_) {}
     }
+  }
+
+  /// Переключить статус избранного для перевода
+  Future<void> toggleFavoriteTranslation(int translationId, bool isFavorite) async {
+    final db = await database;
+    await db.update(
+      'translations',
+      {'is_favorite': isFavorite ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [translationId],
+    );
+  }
+
+  /// Получить избранные переводы (используется для фильтрации)
+  Future<List<Map<String, dynamic>>> getFavoriteTranslations() async {
+    final db = await database;
+    return await db.query(
+      'translations',
+      where: 'is_favorite = 1',
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  /// Удалить перевод по id
+  Future<void> deleteTranslation(int translationId) async {
+    final db = await database;
+    await db.delete(
+      'translations',
+      where: 'id = ?',
+      whereArgs: [translationId],
+    );
+  }
+
+  /// Очистить все избранное
+  Future<void> clearAllFavorites() async {
+    final db = await database;
+    await db.update(
+      'translations',
+      {'is_favorite': 0},
+      where: 'is_favorite = 1',
+    );
   }
 
   Future<void> initLearningMaterials() async {
@@ -183,18 +225,46 @@ class AppDatabase {
     return await db.insert('translations', map);
   }
 
-  Future<List<Map<String, dynamic>>> getTranslationHistory({DateTime? startDate, DateTime? endDate, String? searchQuery}) async {
+  // Замените метод getTranslationHistory на этот:
+  Future<List<Map<String, dynamic>>> getTranslationHistory({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? searchQuery,
+    bool onlyFavorites = false, // ✅ Новый параметр
+  }) async {
     final db = await database;
     String orderBy = 'created_at DESC';
-    if (startDate != null || endDate != null || searchQuery != null) {
-      final whereParts = <String>[];
-      final whereArgs = <dynamic>[];
-      if (startDate != null) { whereParts.add('created_at >= ?'); whereArgs.add(startDate.toIso8601String()); }
-      if (endDate != null) { whereParts.add('created_at <= ?'); whereArgs.add(endDate.toIso8601String()); }
-      if (searchQuery != null) { whereParts.add('source_text LIKE ? OR target_text LIKE ?'); whereArgs.addAll(['%$searchQuery%', '%$searchQuery%']); }
-      return await db.query('translations', where: whereParts.join(' AND '), whereArgs: whereArgs, orderBy: orderBy, limit: 100);
+
+    final whereParts = <String>[];
+    final whereArgs = <dynamic>[];
+
+    // ✅ Фильтр по избранному
+    if (onlyFavorites) {
+      whereParts.add('is_favorite = 1');
     }
-    return await db.query('translations', orderBy: orderBy, limit: 100);
+
+    if (startDate != null) {
+      whereParts.add('created_at >= ?');
+      whereArgs.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      whereParts.add('created_at <= ?');
+      whereArgs.add(endDate.toIso8601String());
+    }
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      whereParts.add('(source_text LIKE ? OR target_text LIKE ?)');
+      whereArgs.addAll(['%$searchQuery%', '%$searchQuery%']);
+    }
+
+    final whereClause = whereParts.isNotEmpty ? whereParts.join(' AND ') : null;
+
+    return await db.query(
+      'translations',
+      where: whereClause,
+      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
+      orderBy: orderBy,
+      limit: 500, // Увеличил лимит
+    );
   }
 
   Future<void> clearTranslationHistory() async {

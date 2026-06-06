@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sembast/blob.dart' as html;
 import 'package:share_plus/share_plus.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
@@ -26,21 +25,62 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   final DateFormat _dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+  bool _showOnlyFavorites = false;
+
+  // ✅ Добавляем переменные для хранения списка переводов
+  List<Map<String, dynamic>> _translations = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTranslations();
+  }
+
+  // ✅ Метод загрузки переводов
+  Future<void> _loadTranslations() async {
+    setState(() => _isLoading = true);
+    try {
+      final translations = await AppDatabase.instance.getTranslationHistory(
+        startDate: _startDate,
+        endDate: _endDate,
+        searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+        onlyFavorites: _showOnlyFavorites,
+      );
+      setState(() {
+        _translations = translations;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('Ошибка загрузки: $e');
+    }
+  }
 
   Future<void> _clearHistory(BuildContext context) async {
     if (!mounted) return;
     setState(() => _isClearing = true);
     try {
-      final confirm = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('Подтверждение'), content: const Text('Очистить всю историю?'), actions: [
-        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Отмена')),
-        TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Очистить', style: TextStyle(color: Colors.red))),
-      ]));
+      final confirm = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
+          title: const Text('Подтверждение'),
+          content: const Text('Очистить всю историю?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Отмена')),
+            TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Очистить', style: TextStyle(color: Colors.red))),
+          ]
+      ));
       if (confirm == true) {
         await AppDatabase.instance.clearTranslationHistory();
-        if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('История очищена'))); setState(() {}); }
+        await _loadTranslations();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('История очищена')));
+        }
       }
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e'))); }
-    finally { if (mounted) setState(() => _isClearing = false); }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+    } finally {
+      if (mounted) setState(() => _isClearing = false);
+    }
   }
 
   Future<void> _removeDuplicates(BuildContext context) async {
@@ -48,13 +88,17 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     setState(() => _isClearing = true);
     try {
       await AppDatabase.instance.removeDuplicateTranslations();
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Дубликаты удалены'))); setState(() {}); }
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e'))); }
-    finally { if (mounted) setState(() => _isClearing = false); }
+      await _loadTranslations();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Дубликаты удалены')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+    } finally {
+      if (mounted) setState(() => _isClearing = false);
+    }
   }
 
-  // Способ 2: Экспорт в документы
-// Замените метод _exportToDocuments на этот:
   Future<void> _exportToDocuments(BuildContext context) async {
     if (!mounted) return;
     setState(() => _isExporting = true);
@@ -66,17 +110,12 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       final now = DateTime.now();
       final fileName = 'mansi_backup_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}-${now.minute.toString().padLeft(2, '0')}-${now.second.toString().padLeft(2, '0')}.json';
 
-      // Получаем директорию для сохранения
       Directory? saveDir;
-
       if (Platform.isAndroid) {
-        // Для Android используем public Downloads
         saveDir = Directory('/storage/emulated/0/Download/MansiTranslator');
         if (!await saveDir.exists()) {
           await saveDir.create(recursive: true);
         }
-      } else if (Platform.isIOS) {
-        saveDir = await getApplicationDocumentsDirectory();
       } else {
         saveDir = await getApplicationDocumentsDirectory();
       }
@@ -113,10 +152,16 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
       if (result != null && result.files.isNotEmpty) {
         final content = kIsWeb ? utf8.decode(result.files.first.bytes!) : await File(result.files.first.path!).readAsString();
         await AppDatabase.instance.importAllData(json.decode(content));
-        if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Импорт завершён'))); setState(() {}); }
+        await _loadTranslations();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Импорт завершён')));
+        }
       }
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e'))); }
-    finally { if (mounted) setState(() => _isImporting = false); }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
+    }
   }
 
   Future<void> _selectDateTime(BuildContext context, bool isStart) async {
@@ -183,8 +228,77 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
             _endTime = pickedTime;
           }
         });
+        await _loadTranslations();
       }
     }
+  }
+
+  // ✅ Исправленный метод переключения избранного
+  Future<void> _toggleFavorite(Map<String, dynamic> item, int index) async {
+    final id = item['id'] as int;
+    final currentStatus = (item['is_favorite'] == 1);
+    final newStatus = !currentStatus;
+
+    // Создаём копию списка и обновляем статус
+    setState(() {
+      final newList = List<Map<String, dynamic>>.from(_translations);
+      newList[index] = Map<String, dynamic>.from(newList[index]);
+      newList[index]['is_favorite'] = newStatus ? 1 : 0;
+      _translations = newList;
+    });
+
+    try {
+      await AppDatabase.instance.toggleFavoriteTranslation(id, newStatus);
+
+      // Если включен фильтр "Только избранное" и мы удалили из избранного
+      if (_showOnlyFavorites && !newStatus) {
+        setState(() {
+          _translations.removeAt(index);
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(currentStatus ? 'Удалено из избранного' : 'Добавлено в избранное'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      // Откат при ошибке
+      setState(() {
+        final rollbackList = List<Map<String, dynamic>>.from(_translations);
+        rollbackList[index] = Map<String, dynamic>.from(rollbackList[index]);
+        rollbackList[index]['is_favorite'] = currentStatus ? 1 : 0;
+        _translations = rollbackList;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+      _startTime = null;
+      _endTime = null;
+      _searchQuery = '';
+      _searchController.clear();
+      _showOnlyFavorites = false;
+    });
+    _loadTranslations();
+  }
+
+  void _toggleFavoriteFilter() {
+    setState(() {
+      _showOnlyFavorites = !_showOnlyFavorites;
+    });
+    _loadTranslations();
   }
 
   @override
@@ -196,14 +310,91 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
         title: LayoutBuilder(builder: (ctx, c) => Text("История переводов", style: TextStyle(fontSize: c.maxWidth > 600 ? 24.0 : 20.0))),
         backgroundColor: const Color(0xFF0A4B47),
         foregroundColor: Colors.white,
-        actions: [IconButton(icon: const Icon(Icons.menu),
-        onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-        )],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+          ),
+        ],
       ),
       body: Column(
         children: [
           Padding(padding: const EdgeInsets.all(16.0), child: Column(
             children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Поиск перевода',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        prefixIcon: const Icon(Icons.search, color: Color(0xFF0A4B47)),
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide(color: Color(0xFF0A4B47)),
+                        ),
+                        enabledBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide(color: Color(0xFF0A4B47)),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                          icon: const Icon(Icons.clear, color: Color(0xFF0A4B47)),
+                          onPressed: () {
+                            setState(() {
+                              _searchQuery = '';
+                              _searchController.clear();
+                            });
+                            _loadTranslations();
+                          },
+                        )
+                            : null,
+                      ),
+                      onChanged: (value) {
+                        setState(() => _searchQuery = value.toLowerCase());
+                        _loadTranslations();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Кнопка "Избранное" (жёлтая звёздочка) с обводкой
+                  // Кнопка фильтра с круглой обводкой
+                  Container(
+                    height: 56,
+                    width: 56,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: const Color(0xFF0A4B47),
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(28),  // Круглая форма
+                      color: _showOnlyFavorites
+                          ? const Color(0xFF0A4B47).withOpacity(0.15)
+                          : Colors.transparent,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _showOnlyFavorites ? Icons.star : Icons.star_border,
+                        color: _showOnlyFavorites ? Colors.amber : const Color(0xFF0A4B47),
+                        size: 28,
+                      ),
+                      onPressed: _toggleFavoriteFilter,
+                      tooltip: _showOnlyFavorites
+                          ? 'Показать всё'
+                          : 'Показать только избранное',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -275,39 +466,20 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                       ),
                     ),
                   ),
+                  if (_startDate != null || _endDate != null || _searchQuery.isNotEmpty || _showOnlyFavorites)
+                    const SizedBox(width: 8),
+                  if (_startDate != null || _endDate != null || _searchQuery.isNotEmpty || _showOnlyFavorites)
+                    TextButton.icon(
+                      onPressed: _clearFilters,
+                      icon: const Icon(Icons.clear, size: 18),
+                      label: const Text('Сбросить'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF0A4B47),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  labelText: 'Поиск перевода',
-                  labelStyle: const TextStyle(color: Color(0xFF0A4B47)),
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF0A4B47)),
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide(color: Color(0xFF0A4B47)),
-                  ),
-                  enabledBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide(color: Color(0xFF0A4B47)),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
-                  ),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                    icon: const Icon(Icons.clear, color: Color(0xFF0A4B47)),
-                    onPressed: () {
-                      setState(() { _searchQuery = ''; _searchController.clear(); });
-                    },
-                  )
-                      : null,
-                ),
-                onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
-              ),
-              const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -346,64 +518,93 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
             ],
           )),
           Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: AppDatabase.instance.getTranslationHistory(
-                startDate: _startDate,
-                endDate: _endDate,
-                searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _translations.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _showOnlyFavorites ? Icons.star_border : Icons.history,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _showOnlyFavorites
+                        ? 'Нет избранных переводов\nДобавьте их через звёздочку'
+                        : 'История переводов пуста',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ],
               ),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Ошибка: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('История переводов пуста'));
-                }
-                return ListView.builder(
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final item = snapshot.data![index];
-                    final createdAtStr = item['created_at'] as String?;
-                    final originalText = item['source_text'] as String? ?? '';
-                    final translatedText = item['target_text'] as String? ?? '';
-                    final sLang = item['source_lang'] as String? ?? 'ru';
-                    final tLang = item['target_lang'] as String? ?? 'mansi';
+            )
+                : ListView.builder(
+              itemCount: _translations.length,
+              itemBuilder: (context, index) {
+                final item = _translations[index];
+                final createdAtStr = item['created_at'] as String?;
+                final originalText = item['source_text'] as String? ?? '';
+                final translatedText = item['target_text'] as String? ?? '';
+                final sLang = item['source_lang'] as String? ?? 'ru';
+                final tLang = item['target_lang'] as String? ?? 'mansi';
+                final isFavorite = (item['is_favorite'] == 1);
 
-                    DateTime? parsedDate;
-                    if (createdAtStr != null && createdAtStr.isNotEmpty) {
-                      try {
-                        parsedDate = DateTime.parse(createdAtStr);
-                      } catch (_) {}
-                    }
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        title: Text(originalText, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                DateTime? parsedDate;
+                if (createdAtStr != null && createdAtStr.isNotEmpty) {
+                  try {
+                    parsedDate = DateTime.parse(createdAtStr);
+                  } catch (_) {}
+                }
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListTile(
+                    title: Text(originalText, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(translatedText),
+                        const SizedBox(height: 4),
+                        Row(
                           children: [
-                            Text(translatedText),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.schedule, size: 14, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Text(
-                                  parsedDate != null ? _dateFormat.format(parsedDate) : 'Нет даты',
-                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                ),
-                                const Spacer(),
-                                Text('$sLang → $tLang', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                              ],
+                            const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              parsedDate != null ? _dateFormat.format(parsedDate) : 'Нет даты',
+                              style: const TextStyle(color: Colors.grey, fontSize: 12),
                             ),
+                            const Spacer(),
+                            Text('$sLang → $tLang', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                           ],
                         ),
-                      ),
-                    );
-                  },
+                      ],
+                    ),
+                    trailing: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Обводка - чуть увеличенная пустая звезда
+                        Icon(
+                          Icons.star_border,
+                          size: 32,  // Чуть больше основной
+                          color: const Color(0xFF0A4B47),  // Тёмно-зелёный
+                        ),
+                        // Основная звезда
+                        IconButton(
+                          icon: Icon(
+                            isFavorite ? Icons.star : Icons.star_border,
+                            size: 28,
+                            color: isFavorite ? Colors.amber : const Color(0xFFE7E4DF),
+                          ),
+                          onPressed: () => _toggleFavorite(item, index),
+                          tooltip: isFavorite ? 'Удалить из избранного' : 'Добавить в избранное',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),

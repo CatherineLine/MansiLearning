@@ -4,7 +4,6 @@ import 'package:Mansi_Translator/tts_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import '../../main.dart';
 import '../../models/translation_entities.dart';
 import '../../services/app_database.dart';
 import '../../widgets/app_drawer.dart';
