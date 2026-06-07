@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:Mansi_Translator/tts_api_service.dart';
+import 'package:Mansi_Translator/services/tts_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;

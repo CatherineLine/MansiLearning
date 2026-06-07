@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/custom_buttons.dart';

@@ -22,7 +22,7 @@ class AppDatabase {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,  // Увеличьте версию
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -129,15 +129,127 @@ class AppDatabase {
 
   Future<void> initLearningMaterials() async {
     final db = await database;
-    var count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM modules'));
-    if (count == 0) {
+
+    // Проверяем и создаём модули
+    var moduleCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM modules'));
+    if (moduleCount == 0) {
       await db.insert('modules', {'title': 'Основы мансийского', 'description': 'Базовый курс', 'order_index': 1});
       await db.insert('modules', {'title': 'Природа и быт', 'description': 'Тематическая лексика', 'order_index': 2});
       await db.insert('levels', {'module_id': 1, 'title': 'Уровень 1: Приветствия', 'difficulty': 'easy'});
       await db.insert('tasks', {'level_id': 1, 'question_text': 'Как переводится "Здравствуйте"?', 'type': 'choice', 'correct_answer': 'Кёинва', 'options_json': jsonEncode(['Кёинва', 'Пасяиба', 'Лань'])});
       await db.insert('riddles', {'question_text': 'Зимой и летом одним цветом?', 'answer_text': 'Ель (Нёр)', 'difficulty_level': 'easy', 'category': 'nature'});
-      await db.insert('translation_sessions', {'id': 1, 'user_id': 1, 'session_type': 'default', 'started_at': DateTime.now().toIso8601String(), 'status': 'active'});
+
+      // ✅ Исправлено: проверяем существует ли уже сессия
+      var sessionExists = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM translation_sessions WHERE id = 1')
+      );
+      if (sessionExists == 0) {
+        await db.insert('translation_sessions', {
+          'id': 1,
+          'user_id': 1,
+          'session_type': 'default',
+          'started_at': DateTime.now().toIso8601String(),
+          'status': 'active'
+        });
+      }
     }
+    var categoryCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM phrase_categories'));
+    if (categoryCount == 0) {
+      final categories = [
+        'Приветствия и прощания',
+        'Основные фразы',
+        'Числа и время',
+        'Еда и напитки',
+        'Покупки',
+        'Транспорт',
+        'Отель и жильё',
+        'Экскурсии и достопримечательности',
+        'Здоровье и аптека',
+        'Экстренные ситуации',
+      ];
+
+      for (var cat in categories) {
+        await db.insert('phrase_categories', {'name': cat, 'icon_resource': 'default'});
+      }
+
+      // Приветствия
+      final greetingsId = 1;
+      await db.insert('phrases', {
+        'category_id': greetingsId,
+        'text_russian': 'Здравствуйте',
+        'text_mansi': 'Пася олэн',
+        'transcription': null,
+      });
+      await db.insert('phrases', {
+        'category_id': greetingsId,
+        'text_russian': 'Доброе утро',
+        'text_mansi': 'Хулпас олэн',
+        'transcription': null,
+      });
+      await db.insert('phrases', {
+        'category_id': greetingsId,
+        'text_russian': 'До свидания',
+        'text_mansi': 'Ащ путир',
+        'transcription': null,
+      });
+      await db.insert('phrases', {
+        'category_id': greetingsId,
+        'text_russian': 'Спасибо',
+        'text_mansi': 'Пумасипа',
+        'transcription': null,
+      });
+
+      // Основные фразы
+      final basicsId = 2;
+      await db.insert('phrases', {
+        'category_id': basicsId,
+        'text_russian': 'Да',
+        'text_mansi': 'Таӈх',
+        'transcription': null,
+      });
+      await db.insert('phrases', {
+        'category_id': basicsId,
+        'text_russian': 'Нет',
+        'text_mansi': 'Ати',
+        'transcription': null,
+      });
+      await db.insert('phrases', {
+        'category_id': basicsId,
+        'text_russian': 'Пожалуйста',
+        'text_mansi': 'Яныг пася',
+        'transcription': null,
+      });
+      await db.insert('phrases', {
+        'category_id': basicsId,
+        'text_russian': 'Извините',
+        'text_mansi': 'Мен о̄лэн',
+        'transcription': null,
+      });
+    }
+    await initLearningMaterials();
+  }
+
+  Future<void> deletePhrase(int phraseId) async {
+    final db = await database;
+    // Сначала удаляем связи в user_phrasebook
+    await db.delete('user_phrasebook', where: 'phrase_id = ?', whereArgs: [phraseId]);
+    // Затем удаляем саму фразу
+    await db.delete('phrases', where: 'id = ?', whereArgs: [phraseId]);
+  }
+
+  Future<void> movePhraseToCategory(int phraseId, int newCategoryId) async {
+    final db = await database;
+    await db.update(
+      'phrases',
+      {'category_id': newCategoryId},
+      where: 'id = ?',
+      whereArgs: [phraseId],
+    );
+  }
+
+  Future<void> deletePhraseCategory(int categoryId) async {
+    final db = await database;
+    await db.delete('phrase_categories', where: 'id = ?', whereArgs: [categoryId]);
   }
 
   Future<List<Module>> getModules() async {
@@ -215,6 +327,83 @@ class AppDatabase {
       }, where: 'id = ?', whereArgs: [existing.id]);
     }
     return await db.rawInsert('INSERT INTO user_progress (user_id, riddle_id, source_context, is_completed, attempts_count, score, last_attempt) VALUES (?, ?, ?, ?, ?, ?, ?)', [userId, riddleId, 'riddle', isCompleted ? 1 : 0, 1, score, DateTime.now().toIso8601String()]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPhraseCategories() async {
+    final db = await database;
+    return await db.query('phrase_categories', orderBy: 'name');
+  }
+
+  Future<List<Map<String, dynamic>>> getPhrasesByCategory(int categoryId) async {
+    final db = await database;
+    return await db.query(
+      'phrases',
+      where: 'category_id = ?',
+      whereArgs: [categoryId],
+      orderBy: 'text_mansi',
+    );
+  }
+
+  Future<int> addPhraseCategory(String name) async {
+    final db = await database;
+    return await db.insert('phrase_categories', {
+      'name': name,
+      'icon_resource': 'custom',
+    });
+  }
+
+  Future<int> addPhrase({
+    required int categoryId,
+    required String textRussian,
+    required String textMansi,
+    String? transcription,
+  }) async {
+    final db = await database;
+    return await db.insert('phrases', {
+      'category_id': categoryId,
+      'media_id': null,
+      'text_russian': textRussian,
+      'text_mansi': textMansi,
+      'transcription': transcription,
+    });
+  }
+
+  Future<void> toggleFavoritePhrase(int userId, int phraseId, bool isFavorite) async {
+    final db = await database;
+    final existing = await db.query(
+      'user_phrasebook',
+      where: 'user_id = ? AND phrase_id = ?',
+      whereArgs: [userId, phraseId],
+    );
+
+    if (existing.isNotEmpty) {
+      await db.update(
+        'user_phrasebook',
+        {'is_favorite': isFavorite ? 1 : 0},
+        where: 'user_id = ? AND phrase_id = ?',
+        whereArgs: [userId, phraseId],
+      );
+    } else {
+      await db.insert('user_phrasebook', {
+        'user_id': userId,
+        'phrase_id': phraseId,
+        'is_favorite': isFavorite ? 1 : 0,
+        'repetition_count': 0,
+        'learned_at': null,
+      });
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getFavoritePhrases(int userId) async {
+    final db = await database;
+    return await db.rawQuery('''
+    SELECT p.*, pc.name as category_name, up.is_favorite
+    FROM phrases p
+    JOIN phrase_categories pc ON p.category_id = pc.id
+    JOIN user_phrasebook up ON p.id = up.phrase_id
+    WHERE up.user_id = ? AND up.is_favorite = 1
+    ORDER BY pc.name, p.text_mansi
+  ''', [userId]);
   }
 
   Future<int> addTranslation(te.Translation translation) async {
