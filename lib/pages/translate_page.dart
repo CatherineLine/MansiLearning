@@ -190,12 +190,9 @@ class _TranslatePageState extends State<TranslatePage> {
           ),
           if (_isMansiLanguage && _isKeyboardVisible)
             MansiKeyboard(
-              onTextInput: (text) { controller1.text += text; _onTextChanged(controller1.text); },
-              onBackspace: () {
-                if (controller1.text.isNotEmpty) {
-                  controller1.text = controller1.text.substring(0, controller1.text.length - 1);
-                  _onTextChanged(controller1.text);
-                }
+              onTextInput: (text) {
+                controller1.text += text;
+                _onTextChanged(controller1.text);
               },
             ),
         ],
