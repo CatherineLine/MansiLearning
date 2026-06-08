@@ -3,16 +3,13 @@ import 'package:flutter/material.dart';
 import '../base_scafford.dart';
 import '../models/phrasebook_entities.dart';
 import '../services/app_database.dart';
+import '../widgets/app_drawer.dart';
 import 'module_levels_page.dart';
-import 'translate_page.dart';
-import 'main_menu_page.dart';
-import 'phrasebook_page.dart';
-import 'translation_history_page.dart';
 import '../models/learning_entities.dart';
 
 class TaskPage extends StatefulWidget {
   final int moduleId;
-  final int levelId;   // ✅ ДОБАВЛЕНО
+  final int levelId;
   final int level;
   final String moduleTitle;
   final List<Map<String, dynamic>> tasks;
@@ -21,7 +18,7 @@ class TaskPage extends StatefulWidget {
   const TaskPage({
     super.key,
     required this.moduleId,
-    required this.levelId,   // ✅ ДОБАВЛЕНО
+    required this.levelId,
     required this.level,
     required this.moduleTitle,
     required this.tasks,
@@ -41,6 +38,7 @@ class _TaskPageState extends State<TaskPage> {
   final List<String> _selectedMultipleAnswers = [];
   late Future<List<Task>> _tasksFuture;
   bool _levelCompleted = false;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -60,7 +58,7 @@ class _TaskPageState extends State<TaskPage> {
   Future<void> _saveProgressOnClose() async {
     await AppDatabase.instance.saveUserProgress(UserProgress(
       userId: 1,
-      taskId: widget.levelId,  // ✅ Используем levelId
+      taskId: widget.levelId,
       riddleId: null,
       sourceContext: 'task',
       isCompleted: false,
@@ -135,7 +133,7 @@ class _TaskPageState extends State<TaskPage> {
 
     await AppDatabase.instance.saveUserProgress(UserProgress(
       userId: 1,
-      taskId: widget.levelId,  // ✅ Используем levelId
+      taskId: widget.levelId,
       riddleId: null,
       sourceContext: 'task',
       isCompleted: true,
@@ -234,8 +232,6 @@ class _TaskPageState extends State<TaskPage> {
     }
   }
 
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -247,13 +243,20 @@ class _TaskPageState extends State<TaskPage> {
         }
       },
       child: BaseScaffold(
-        key: _scaffoldKey,
+        scaffoldKey: _scaffoldKey,
         appBar: AppBar(
           title: Text('${widget.moduleTitle} - Уровень ${widget.level}'),
           backgroundColor: const Color(0xFF0A4B47),
           foregroundColor: Colors.white,
-          leading: const SizedBox.shrink(),  // ✅ Убрана кнопка назад
+          leading: const SizedBox.shrink(),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+            ),
+          ],
         ),
+        endDrawer: const AppDrawer(activeSection: DrawerActiveSection.learning),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: FutureBuilder<List<Task>>(
@@ -318,40 +321,6 @@ class _TaskPageState extends State<TaskPage> {
               );
             },
           ),
-        ),
-        endDrawer: _buildDrawer(context),
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: Container(
-        padding: const EdgeInsets.only(top: 40),
-        decoration: const BoxDecoration(color: Color(0xFFE7E4DF)),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            ListTile(
-              title: const Text('Переводчик', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslatePage())),
-            ),
-            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
-            ListTile(
-              title: const Text('Обучение', style: TextStyle(fontSize: 20, color: Color(0xFF0A4B47))),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => MainMenuPage())),
-            ),
-            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
-            ListTile(
-              title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslationHistoryPage())),
-            ),
-            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
-            ListTile(
-              title: const Text('Разговорник', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PhrasebookPage())),
-            ),
-          ],
         ),
       ),
     );

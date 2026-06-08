@@ -1,3 +1,4 @@
+// pages/translate_page.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:Mansi_Translator/services/tts_api_service.dart';
@@ -6,10 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../../models/translation_entities.dart';
 import '../../services/app_database.dart';
-import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_buttons.dart';
 import '../../widgets/mansi_keyboard.dart';
-import '../base_scafford.dart';
+import '../../widgets/base_page.dart';
+import '../widgets/app_drawer.dart'; // ← Импортируем BasePage
 
 class TranslatePage extends StatefulWidget {
   const TranslatePage({super.key});
@@ -29,7 +30,6 @@ class _TranslatePageState extends State<TranslatePage> {
   final FocusNode _focusNode = FocusNode();
   String text1 = 'Русский';
   String text2 = 'Мансийский';
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isTranslating = false;
 
   @override
@@ -139,29 +139,12 @@ class _TranslatePageState extends State<TranslatePage> {
     _debounce = Timer(const Duration(seconds: 2), () => getTranslate(text));
   }
 
-  void _openMenu() {
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return BaseScaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        leading: Padding(padding: const EdgeInsets.all(8.0), child: Image.asset("assets/images/logo.png")),
-        title: LayoutBuilder(
-          builder: (context, constraints) => Text(
-            "Переводчик",
-            style: TextStyle(fontSize: constraints.maxWidth > 600 ? 24.0 : 20.0, fontWeight: FontWeight.normal),
-          ),
-        ),
-        backgroundColor: const Color(0xFF0A4B47),
-        foregroundColor: Colors.white,
-        actions: [
-          MenuButton(onPressed: _openMenu)
-        ],
-      ),
-      body: Column(
+    return BasePage(
+      title: "Переводчик",
+      activeSection: DrawerActiveSection.translator,
+      child: Column(
         children: [
           Expanded(
             child: ListView(
@@ -197,7 +180,6 @@ class _TranslatePageState extends State<TranslatePage> {
             ),
         ],
       ),
-      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.translator),
     );
   }
 

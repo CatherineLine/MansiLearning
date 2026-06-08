@@ -1,9 +1,10 @@
-// riddles_menu_page.dart
+// pages/riddles_menu_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../base_scafford.dart';
 import '../services/app_database.dart';
+import '../widgets/app_drawer.dart';
+import '../widgets/base_page.dart';
 import 'riddle_page.dart';
 
 class RiddlesMenuPage extends StatefulWidget {
@@ -100,7 +101,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
     final isUnlocked = _isRiddleUnlocked(riddleNumber);
     final isCompleted = _riddleStatus[riddleNumber] ?? false;
 
-    // Проверка на очки
     if (!isUnlocked) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -132,26 +132,10 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BaseScaffold(
-      backgroundColor: const Color(0xFFE7E4DF),
-      appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset("assets/images/logo.png"),
-        ),
-        title: const Text(
-          "Загадки",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.normal,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF0A4B47),
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: _isLoading
+    return BasePage(
+      title: "Загадки",
+      activeSection: DrawerActiveSection.riddles,
+      child: _isLoading
           ? const Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0A4B47)),
@@ -230,7 +214,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
                       ),
                       child: Row(
                         children: [
-                          // Иконка статуса
                           Container(
                             width: 50,
                             height: 50,
@@ -257,8 +240,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
                             ),
                           ),
                           const SizedBox(width: 16),
-
-                          // Информация о загадке
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,7 +255,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
-                                    // Требуемые очки
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
@@ -305,8 +285,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-
-                                    // Статус разгадано/не разгадано
                                     if (isCompleted)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
@@ -369,8 +347,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
                               ],
                             ),
                           ),
-
-                          // Стрелка вперёд
                           Icon(
                             Icons.arrow_forward_ios,
                             size: 18,
@@ -386,8 +362,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
               },
             ),
           ),
-          // Добавляем отступ снизу для системных кнопок
-          const SizedBox(height: 20),
         ],
       ),
     );

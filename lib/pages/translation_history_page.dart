@@ -27,7 +27,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
   final DateFormat _dateFormat = DateFormat('dd.MM.yyyy HH:mm');
   bool _showOnlyFavorites = false;
 
-  // ✅ Добавляем переменные для хранения списка переводов
   List<Map<String, dynamic>> _translations = [];
   bool _isLoading = true;
 
@@ -37,7 +36,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     _loadTranslations();
   }
 
-  // ✅ Метод загрузки переводов
   Future<void> _loadTranslations() async {
     setState(() => _isLoading = true);
     try {
@@ -233,13 +231,11 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     }
   }
 
-  // ✅ Исправленный метод переключения избранного
   Future<void> _toggleFavorite(Map<String, dynamic> item, int index) async {
     final id = item['id'] as int;
     final currentStatus = (item['is_favorite'] == 1);
     final newStatus = !currentStatus;
 
-    // Создаём копию списка и обновляем статус
     setState(() {
       final newList = List<Map<String, dynamic>>.from(_translations);
       newList[index] = Map<String, dynamic>.from(newList[index]);
@@ -250,7 +246,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
     try {
       await AppDatabase.instance.toggleFavoriteTranslation(id, newStatus);
 
-      // Если включен фильтр "Только избранное" и мы удалили из избранного
       if (_showOnlyFavorites && !newStatus) {
         setState(() {
           _translations.removeAt(index);
@@ -266,7 +261,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
         );
       }
     } catch (e) {
-      // Откат при ошибке
       setState(() {
         final rollbackList = List<Map<String, dynamic>>.from(_translations);
         rollbackList[index] = Map<String, dynamic>.from(rollbackList[index]);
@@ -304,7 +298,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return BaseScaffold(
-      key: _scaffoldKey,
+      scaffoldKey: _scaffoldKey,
       appBar: AppBar(
         leading: Padding(padding: const EdgeInsets.all(8.0), child: Image.asset("assets/images/logo.png")),
         title: LayoutBuilder(builder: (ctx, c) => Text("История переводов", style: TextStyle(fontSize: c.maxWidth > 600 ? 24.0 : 20.0))),
@@ -317,6 +311,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           ),
         ],
       ),
+      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.history),
       body: Column(
         children: [
           Padding(padding: const EdgeInsets.all(16.0), child: Column(
@@ -363,8 +358,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Кнопка "Избранное" (жёлтая звёздочка) с обводкой
-                  // Кнопка фильтра с круглой обводкой
                   Container(
                     height: 56,
                     width: 56,
@@ -373,7 +366,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                         color: const Color(0xFF0A4B47),
                         width: 1.5,
                       ),
-                      borderRadius: BorderRadius.circular(28),  // Круглая форма
+                      borderRadius: BorderRadius.circular(28),
                       color: _showOnlyFavorites
                           ? const Color(0xFF0A4B47).withOpacity(0.15)
                           : Colors.transparent,
@@ -584,13 +577,11 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
                     trailing: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Обводка - чуть увеличенная пустая звезда
                         Icon(
                           Icons.star_border,
-                          size: 32,  // Чуть больше основной
-                          color: const Color(0xFF0A4B47),  // Тёмно-зелёный
+                          size: 32,
+                          color: const Color(0xFF0A4B47),
                         ),
-                        // Основная звезда
                         IconButton(
                           icon: Icon(
                             isFavorite ? Icons.star : Icons.star_border,
@@ -611,7 +602,6 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
           ),
         ],
       ),
-      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.history),
     );
   }
 }

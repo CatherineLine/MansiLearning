@@ -1,4 +1,3 @@
-// main_menu_page.dart (исправленная версия)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,9 +6,8 @@ import '../models/learning_entities.dart';
 import '../models/phrasebook_entities.dart' as pb;
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
-import 'document_translation_page.dart';
 import 'module_levels_page.dart';
-import 'riddles_menu_page.dart'; // ← Импорт нового меню загадок
+import 'riddles_menu_page.dart';
 
 class MainMenuPage extends StatelessWidget {
   final List<Map<String, dynamic>> modules = [
@@ -32,7 +30,7 @@ class MainMenuPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BaseScaffold(
-      key: scaffoldKey,
+      scaffoldKey: scaffoldKey,
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -56,6 +54,7 @@ class MainMenuPage extends StatelessWidget {
           ),
         ],
       ),
+      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.learning),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -70,27 +69,10 @@ class MainMenuPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            _buildRiddleButton(context), // ← Передаём context
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const DocumentTranslationPage()),
-                );
-              },
-              icon: const Icon(Icons.description),
-              label: const Text('Перевод документов'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0A4B47),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-            ),
+            _buildRiddleButton(context),
           ],
         ),
       ),
-      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.learning),
     );
   }
 
@@ -152,7 +134,6 @@ class MainMenuPage extends StatelessWidget {
     );
   }
 
-  // ← Добавляем параметр BuildContext
   Widget _buildRiddleButton(BuildContext context) {
     return ElevatedButton.icon(
       onPressed: () {

@@ -1,4 +1,6 @@
+// base_scaffold.dart
 import 'package:flutter/material.dart';
+import '../widgets/app_drawer.dart';
 
 class BaseScaffold extends StatelessWidget {
   final Widget body;
@@ -7,25 +9,27 @@ class BaseScaffold extends StatelessWidget {
   final Widget? endDrawer;
   final Widget? bottomNavigationBar;
   final Color? backgroundColor;
-  final double bottomPadding; // Процент отступа снизу (0-1)
+  final Key? key;
+  final GlobalKey<ScaffoldState>? scaffoldKey;
 
   const BaseScaffold({
-    super.key,
+    this.key,
+    this.scaffoldKey,
     required this.body,
     this.appBar,
     this.floatingActionButton,
     this.endDrawer,
     this.bottomNavigationBar,
     this.backgroundColor,
-    this.bottomPadding = 0.02, // 5% от высоты экрана по умолчанию
   });
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final bottomPaddingValue = screenHeight * bottomPadding;
+    final bottomPadding = screenHeight * 0.02; // 2% от высоты экрана
 
     return Scaffold(
+      key: scaffoldKey ?? key as GlobalKey<ScaffoldState>?,
       backgroundColor: backgroundColor ?? const Color(0xFFE7E4DF),
       appBar: appBar,
       body: SafeArea(
@@ -34,8 +38,7 @@ class BaseScaffold extends StatelessWidget {
             Expanded(
               child: body,
             ),
-            // Пустое пространство снизу
-            SizedBox(height: bottomPaddingValue),
+            SizedBox(height: bottomPadding), // Автоматический отступ снизу
           ],
         ),
       ),
