@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import '../base_scafford.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/custom_buttons.dart';
@@ -302,7 +303,7 @@ class _TranslationHistoryPageState extends State<TranslationHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BaseScaffold(
       key: _scaffoldKey,
       appBar: AppBar(
         leading: Padding(padding: const EdgeInsets.all(8.0), child: Image.asset("assets/images/logo.png")),

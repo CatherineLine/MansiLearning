@@ -1,22 +1,27 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../base_scafford.dart';
 import '../models/phrasebook_entities.dart';
 import '../services/app_database.dart';
 import 'module_levels_page.dart';
-import 'riddle_page.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
+import 'phrasebook_page.dart';
+import 'translation_history_page.dart';
 import '../models/learning_entities.dart';
 
 class TaskPage extends StatefulWidget {
   final int moduleId;
+  final int levelId;   // ✅ ДОБАВЛЕНО
   final int level;
   final String moduleTitle;
   final List<Map<String, dynamic>> tasks;
   final int initialScore;
+
   const TaskPage({
     super.key,
     required this.moduleId,
+    required this.levelId,   // ✅ ДОБАВЛЕНО
     required this.level,
     required this.moduleTitle,
     required this.tasks,
@@ -33,27 +38,35 @@ class _TaskPageState extends State<TaskPage> {
   bool _showSuccess = false;
   String? _selectedAnswer;
   bool _answerChecked = false;
-  bool _isLastLevel = false;
   final List<String> _selectedMultipleAnswers = [];
   late Future<List<Task>> _tasksFuture;
+  bool _levelCompleted = false;
 
   @override
   void initState() {
     super.initState();
     _score = widget.initialScore;
     _tasksFuture = Future.value(widget.tasks.map((t) => Task.fromMap(t)).toList());
-    _checkIfLastLevel();
   }
 
-  Future<void> _checkIfLastLevel() async {
-    final levels = await AppDatabase.instance.getModuleLevels(widget.moduleId);
-    if (levels.isNotEmpty) {
-      // Исправлено: levels.last - это объект Level, доступ через точку
-      final maxLevel = levels.last.id ?? 0;
-      setState(() {
-        _isLastLevel = widget.level >= maxLevel;
-      });
+  @override
+  void dispose() {
+    if (_answerChecked && !_levelCompleted) {
+      _saveProgressOnClose();
     }
+    super.dispose();
+  }
+
+  Future<void> _saveProgressOnClose() async {
+    await AppDatabase.instance.saveUserProgress(UserProgress(
+      userId: 1,
+      taskId: widget.levelId,  // ✅ Используем levelId
+      riddleId: null,
+      sourceContext: 'task',
+      isCompleted: false,
+      attemptsCount: 1,
+      score: _score,
+    ));
   }
 
   List<String> _parseOptions(String optionsJson) {
@@ -67,11 +80,43 @@ class _TaskPageState extends State<TaskPage> {
 
   void _checkAnswer() {
     if (_selectedAnswer == null && _selectedMultipleAnswers.isEmpty) return;
+
     _tasksFuture.then((tasks) {
       final currentTask = tasks[_currentTaskIndex];
-      final isCorrect = currentTask.type == 'multiple'
-          ? _selectedMultipleAnswers.contains(currentTask.correctAnswer)
-          : _selectedAnswer == currentTask.correctAnswer;
+      bool isCorrect = false;
+
+      if (currentTask.type == 'multiple') {
+        List<String> correctAnswers = [];
+        try {
+          final decoded = jsonDecode(currentTask.correctAnswer);
+          if (decoded is List) {
+            correctAnswers = decoded.map((e) => e.toString().toLowerCase().trim()).toList();
+          } else {
+            correctAnswers = currentTask.correctAnswer
+                .split(',')
+                .map((s) => s.trim().toLowerCase())
+                .toList();
+          }
+        } catch (e) {
+          correctAnswers = currentTask.correctAnswer
+              .split(',')
+              .map((s) => s.trim().toLowerCase())
+              .toList();
+        }
+
+        final selectedAnswers = _selectedMultipleAnswers
+            .map((s) => s.trim().toLowerCase())
+            .toList();
+
+        correctAnswers.sort();
+        selectedAnswers.sort();
+
+        isCorrect = correctAnswers.join(',') == selectedAnswers.join(',');
+      } else {
+        isCorrect = _selectedAnswer?.trim().toLowerCase() ==
+            currentTask.correctAnswer.trim().toLowerCase();
+      }
+
       setState(() {
         _answerChecked = true;
         if (isCorrect) {
@@ -84,49 +129,32 @@ class _TaskPageState extends State<TaskPage> {
     });
   }
 
-  void _nextTaskOrLevel(BuildContext context) async {
+  Future<void> _saveProgress() async {
+    if (_levelCompleted) return;
+    _levelCompleted = true;
+
+    await AppDatabase.instance.saveUserProgress(UserProgress(
+      userId: 1,
+      taskId: widget.levelId,  // ✅ Используем levelId
+      riddleId: null,
+      sourceContext: 'task',
+      isCompleted: true,
+      attemptsCount: 1,
+      score: _score,
+    ));
+  }
+
+  void _nextTask() {
     if (_currentTaskIndex < widget.tasks.length - 1) {
       setState(() {
         _currentTaskIndex++;
         _selectedAnswer = null;
         _answerChecked = false;
         _showSuccess = false;
+        _selectedMultipleAnswers.clear();
       });
     } else {
-      final currentTask = widget.tasks[_currentTaskIndex];
-      await AppDatabase.instance.saveUserProgress(UserProgress(
-        userId: 1,
-        taskId: currentTask['id'] as int? ?? 0,
-        riddleId: null,
-        sourceContext: 'task',
-        isCompleted: true,
-        attemptsCount: 1,
-        score: _score + 20,
-      ));
-      final totalScore = await AppDatabase.instance.getUserTotalScore(1);
-      final solvedRiddlesCount = await AppDatabase.instance.getCompletedRiddlesCount(1);
-      await AppDatabase.instance.saveRiddleProgress(1, solvedRiddlesCount + 1, true, totalScore);
-      final levels = await AppDatabase.instance.getModuleLevels(widget.moduleId);
-      final nextLevel = widget.level + 1;
-      final hasNextLevel = levels.any((l) => l.id == nextLevel);
-      if (hasNextLevel) {
-        final nextLevelTasks = await AppDatabase.instance.getTasks(widget.moduleId);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TaskPage(
-              moduleId: widget.moduleId,
-              level: nextLevel,
-              moduleTitle: widget.moduleTitle,
-              tasks: nextLevelTasks.map((t) => t.toMap()).toList(),
-              initialScore: _score,
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Модуль завершён!')),
-        );
+      _saveProgress().then((_) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -136,32 +164,14 @@ class _TaskPageState extends State<TaskPage> {
             ),
           ),
         );
-        if (_score >= 100 && _score % 100 == 0) {
-          AppDatabase.instance.getRiddles().then((riddlesList) {
-            if (riddlesList.isNotEmpty) {
-              final int riddleNumber = (_score ~/ 100) - 1;
-              if (riddleNumber < riddlesList.length) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RiddlePage(
-                      riddleIndex: riddleNumber,
-                      userScore: _score,
-                      riddles: riddlesList.map((r) => r.toMap()).toList(),
-                    ),
-                  ),
-                );
-              }
-            }
-          });
-        }
-      }
+      });
     }
   }
 
   Widget _buildQuestionWidget(Task task) {
     final options = _parseOptions(task.optionsJson);
-    switch (task.type) { // Убрано ?? 'single'
+
+    switch (task.type) {
       case 'true_false':
         return Column(
           children: [
@@ -201,6 +211,11 @@ class _TaskPageState extends State<TaskPage> {
                 });
               },
             )),
+            const SizedBox(height: 10),
+            Text(
+              'Выбрано: ${_selectedMultipleAnswers.length} из ${options.length}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
         );
       default:
@@ -223,77 +238,89 @@ class _TaskPageState extends State<TaskPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        title: Text('${widget.moduleTitle} - Уровень ${widget.level}'),
-        backgroundColor: const Color(0xFF0A4B47),
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: FutureBuilder<List<Task>>(
-          future: _tasksFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Ошибка загрузки заданий: ${snapshot.error}'));
-            }
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text('Задания не найдены'));
-            }
-            final tasks = snapshot.data!;
-            final currentTask = tasks[_currentTaskIndex];
-            return Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: _buildQuestionWidget(currentTask),
-                  ),
-                ),
-                if (_answerChecked)
-                  Text(
-                    _showSuccess ? 'Правильно!' : 'Неправильно!',
-                    style: TextStyle(
-                      color: _showSuccess ? Colors.green : Colors.red,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                const SizedBox(height: 10),
-                Text('Счет: $_score', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 20),
-                if (!_answerChecked)
-                  ElevatedButton(
-                    onPressed: _checkAnswer,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0A4B47),
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: const Text('Проверить', style: TextStyle(fontSize: 18)),
-                  )
-                else
-                  ElevatedButton(
-                    onPressed: () => _nextTaskOrLevel(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0A4B47),
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: Text(
-                      _currentTaskIndex < tasks.length - 1
-                          ? 'Следующее задание'
-                          : _isLastLevel ? 'Завершить модуль' : 'Следующий уровень',
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                  ),
-              ],
-            );
-          },
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        if (!_levelCompleted && _answerChecked) {
+          await _saveProgressOnClose();
+        }
+      },
+      child: BaseScaffold(
+        key: _scaffoldKey,
+        appBar: AppBar(
+          title: Text('${widget.moduleTitle} - Уровень ${widget.level}'),
+          backgroundColor: const Color(0xFF0A4B47),
+          foregroundColor: Colors.white,
+          leading: const SizedBox.shrink(),  // ✅ Убрана кнопка назад
         ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: FutureBuilder<List<Task>>(
+            future: _tasksFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Ошибка загрузки заданий: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('Задания не найдены'));
+              }
+
+              final tasks = snapshot.data!;
+              final currentTask = tasks[_currentTaskIndex];
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: _buildQuestionWidget(currentTask),
+                    ),
+                  ),
+                  if (_answerChecked)
+                    Text(
+                      _showSuccess ? '✅ Правильно! +10 очков' : '❌ Неправильно!',
+                      style: TextStyle(
+                        color: _showSuccess ? Colors.green : Colors.red,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  Text('💰 Счет: $_score', style: const TextStyle(fontSize: 18)),
+                  const SizedBox(height: 20),
+                  if (!_answerChecked)
+                    ElevatedButton(
+                      onPressed: _checkAnswer,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0A4B47),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: const Text('Проверить', style: TextStyle(fontSize: 18)),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: _nextTask,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0A4B47),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: Text(
+                        _currentTaskIndex < tasks.length - 1
+                            ? '➡️ Следующее задание'
+                            : ' Завершить уровень',
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        endDrawer: _buildDrawer(context),
       ),
-      endDrawer: _buildDrawer(context),
     );
   }
 
@@ -317,7 +344,12 @@ class _TaskPageState extends State<TaskPage> {
             const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
               title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {},
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslationHistoryPage())),
+            ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
+            ListTile(
+              title: const Text('Разговорник', style: TextStyle(fontSize: 20, color: Colors.black)),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PhrasebookPage())),
             ),
           ],
         ),

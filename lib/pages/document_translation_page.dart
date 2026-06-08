@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import '../base_scafford.dart';
 import '../services/file_translation_service.dart';
 
 class DocumentTranslationPage extends StatefulWidget {
@@ -77,7 +78,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
     final isActiveTranslation = currentProgress >= 0 && currentProgress < 100;
     final isCompleted = currentProgress == 100;
 
-    return Scaffold(
+    return BaseScaffold(
       appBar: AppBar(
         title: const Text('Перевод документов'),
         backgroundColor: const Color(0xFF0A4B47),

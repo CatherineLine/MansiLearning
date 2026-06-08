@@ -9,6 +9,7 @@ import '../../services/app_database.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/custom_buttons.dart';
 import '../../widgets/mansi_keyboard.dart';
+import '../base_scafford.dart';
 
 class TranslatePage extends StatefulWidget {
   const TranslatePage({super.key});
@@ -144,9 +145,8 @@ class _TranslatePageState extends State<TranslatePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BaseScaffold(
       key: _scaffoldKey,
-      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         leading: Padding(padding: const EdgeInsets.all(8.0), child: Image.asset("assets/images/logo.png")),
         title: LayoutBuilder(

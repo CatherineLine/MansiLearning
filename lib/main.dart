@@ -1,3 +1,4 @@
+// main.dart - обновлённый
 import 'dart:async';
 import 'package:Mansi_Translator/pages/translate_page.dart';
 import 'package:Mansi_Translator/services/tts_api_service.dart';
@@ -9,10 +10,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Запускаем инициализацию БД в фоне
+  await AppDatabase.instance.database;
+  await AppDatabase.instance.initLearningMaterials();
   unawaited(_initializeDatabase());
-
   runApp(const MyApp());
 }
 
@@ -26,7 +26,6 @@ Future<void> _initializeDatabase() async {
     debugPrint('❌ Ошибка инициализации БД: $e');
   }
 
-  // TTS инициализируем с задержкой
   Future.delayed(const Duration(seconds: 2), () {
     TtsAudioPlayer.init().catchError((e) => debugPrint('TTS init error: $e'));
   });
@@ -38,7 +37,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Mansi Translator',
+      title: 'Мансийский переводчик',
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -55,6 +54,17 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const SplashScreen(),
+      builder: (context, child) {
+        // Глобальный MediaQuery с отступом снизу
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            padding: MediaQuery.of(context).padding.copyWith(
+              bottom: MediaQuery.of(context).size.height * 0.05, // 5% от высоты экрана
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }
@@ -70,8 +80,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Переход после первой отрисовки
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -104,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Mansi Translator',
+              'Мансийский переводчик',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 20,

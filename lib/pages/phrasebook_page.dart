@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import '../base_scafford.dart';
 import '../services/app_database.dart';
 import '../services/translation_service.dart';
 import '../services/tts_api_service.dart';
@@ -804,7 +805,7 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
     final filteredPhrases = _getFilteredPhrases();
     final currentCategoryName = _getCurrentCategoryName();
 
-    return Scaffold(
+    return BaseScaffold(
       key: _scaffoldKey,
       appBar: AppBar(
         leading: Padding(

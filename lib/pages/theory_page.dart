@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
+import '../base_scafford.dart';
 import '../models/learning_entities.dart';
 import '../services/app_database.dart';
 import 'task_page.dart';
 import 'translate_page.dart';
 import 'main_menu_page.dart';
+import 'phrasebook_page.dart';
+import 'translation_history_page.dart';
 
 class TheoryPage extends StatefulWidget {
   final int moduleId;
+  final int levelId;   // ✅ ДОБАВЛЕНО
   final int level;
   final String moduleTitle;
 
   const TheoryPage({
     super.key,
     required this.moduleId,
+    required this.levelId,   // ✅ ДОБАВЛЕНО
     required this.level,
     required this.moduleTitle,
   });
@@ -28,16 +34,17 @@ class _TheoryPageState extends State<TheoryPage> {
   @override
   void initState() {
     super.initState();
-    _theoryFuture = AppDatabase.instance.getTheory(widget.moduleId, widget.level);
-    _tasksFuture = AppDatabase.instance.getTasks(widget.moduleId);
+    // ✅ Используем levelId вместо moduleId
+    _theoryFuture = AppDatabase.instance.getTheory(widget.levelId);
+    _tasksFuture = AppDatabase.instance.getTasks(widget.levelId);
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,  // Добавить ключ
+    return BaseScaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: Text(
           '${widget.moduleTitle} - Уровень ${widget.level}',
@@ -57,9 +64,16 @@ class _TheoryPageState extends State<TheoryPage> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: theorySnapshot.hasData && theorySnapshot.data!.isNotEmpty
-                      ? Text(
-                    theorySnapshot.data!.first.contentHtml,
-                    style: const TextStyle(fontSize: 18),
+                      ? Html(
+                    data: theorySnapshot.data!.first.contentHtml,
+                    style: {
+                      'body': Style(fontSize: FontSize(18.0), color: Colors.black),
+                      'h2': Style(
+                        fontSize: FontSize(24.0),
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF0A4B47),
+                      ),
+                    },
                   )
                       : const Text(
                     'Теория не требуется для этого уровня',
@@ -76,9 +90,7 @@ class _TheoryPageState extends State<TheoryPage> {
                       if (tasksSnapshot.connectionState == ConnectionState.waiting) {
                         return const CircularProgressIndicator();
                       }
-
                       final hasTasks = tasksSnapshot.hasData && tasksSnapshot.data!.isNotEmpty;
-
                       return ElevatedButton(
                         onPressed: hasTasks
                             ? () {
@@ -87,6 +99,7 @@ class _TheoryPageState extends State<TheoryPage> {
                             MaterialPageRoute(
                               builder: (context) => TaskPage(
                                 moduleId: widget.moduleId,
+                                levelId: widget.levelId,  // ✅ ПЕРЕДАЁМ levelId
                                 level: widget.level,
                                 moduleTitle: widget.moduleTitle,
                                 tasks: tasksSnapshot.data!.map((t) => t.toMap()).toList(),
@@ -134,7 +147,12 @@ class _TheoryPageState extends State<TheoryPage> {
             const Divider(height: 1, thickness: 0.5, color: Colors.grey),
             ListTile(
               title: const Text('История переводов', style: TextStyle(fontSize: 20, color: Colors.black)),
-              onTap: () {},
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TranslationHistoryPage())),
+            ),
+            const Divider(height: 1, thickness: 0.5, color: Colors.grey),
+            ListTile(
+              title: const Text('Разговорник', style: TextStyle(fontSize: 20, color: Colors.black)),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PhrasebookPage())),
             ),
           ],
         ),
