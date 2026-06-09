@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../base_scafford.dart';
 import '../models/learning_entities.dart';
 import '../models/phrasebook_entities.dart' as pb;
@@ -9,7 +7,14 @@ import '../widgets/app_drawer.dart';
 import 'module_levels_page.dart';
 import 'riddles_menu_page.dart';
 
-class MainMenuPage extends StatelessWidget {
+class MainMenuPage extends StatefulWidget {
+  const MainMenuPage({super.key});
+
+  @override
+  State<MainMenuPage> createState() => _MainMenuPageState();
+}
+
+class _MainMenuPageState extends State<MainMenuPage> {
   final List<Map<String, dynamic>> modules = [
     {'id': 1, 'title': 'Фонетика мансийского языка'},
     {'id': 2, 'title': 'Грамматика (число и местоимения)'},
@@ -24,11 +29,29 @@ class MainMenuPage extends StatelessWidget {
   ];
 
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+  int _completedLevelsCount = 0;
+  bool _isLoading = true;
 
-  MainMenuPage({super.key});
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    final completedLevels = await AppDatabase.instance.getCompletedLevelsCount(1);
+    setState(() {
+      _completedLevelsCount = completedLevels;
+      _isLoading = false;
+    });
+    debugPrint('💰 Пройдено уровней: $_completedLevelsCount, Очков: ${_completedLevelsCount * 10}');
+  }
 
   @override
   Widget build(BuildContext context) {
+    final totalScore = _completedLevelsCount * 10;
+
     return BaseScaffold(
       scaffoldKey: scaffoldKey,
       appBar: AppBar(
@@ -55,22 +78,72 @@ class MainMenuPage extends StatelessWidget {
         ],
       ),
       endDrawer: const AppDrawer(activeSection: DrawerActiveSection.learning),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Выберите модуль:', style: TextStyle(fontSize: 18)),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView.builder(
-                itemCount: modules.length,
-                itemBuilder: (context, index) => _buildModuleItem(context, modules[index]),
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A4B47),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '💰 Ваши очки:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (_isLoading)
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$totalScore',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0A4B47),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _buildRiddleButton(context),
-          ],
+              const SizedBox(height: 16),
+              const Text('Выберите модуль:', style: TextStyle(fontSize: 18)),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: modules.length,
+                  itemBuilder: (context, index) => _buildModuleItem(context, modules[index]),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildRiddleButton(context),
+            ],
+          ),
         ),
       ),
     );
@@ -122,7 +195,7 @@ class MainMenuPage extends StatelessWidget {
 
             return ListTile(
               title: Text(module['title']),
-              subtitle: Text(isCompleted ? 'Пройден' : 'В процессе'),
+              subtitle: Text(isCompleted ? '✅ Пройден' : '📚 В процессе'),
               trailing: const Icon(Icons.arrow_forward),
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => ModuleLevelsPage(moduleId: module['id'], moduleTitle: module['title'])));

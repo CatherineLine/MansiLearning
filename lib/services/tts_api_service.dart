@@ -211,6 +211,8 @@ class TtsAudioPlayer {
 }
 
 /// ✅ Исправленная кнопка озвучивания
+// tts_api_service.dart - исправленный TtsSpeechButton
+
 class TtsSpeechButton extends StatefulWidget {
   final String text;
   final Color? iconColor;
@@ -218,6 +220,7 @@ class TtsSpeechButton extends StatefulWidget {
   final VoidCallback? onPlayStart;
   final VoidCallback? onPlayComplete;
   final VoidCallback? onError;
+  final bool showText;  // ✅ Новый параметр
 
   const TtsSpeechButton({
     super.key,
@@ -227,6 +230,7 @@ class TtsSpeechButton extends StatefulWidget {
     this.onPlayStart,
     this.onPlayComplete,
     this.onError,
+    this.showText = false,  // ✅ По умолчанию не показываем текст
   });
 
   @override
@@ -237,7 +241,7 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
   final TtsApiService _ttsService = TtsApiService();
   bool _isSynthesizing = false;
   bool _isPlaying = false;
-  Timer? _pollingTimer; // ✅ Таймер для безопасной отмены
+  Timer? _pollingTimer;
 
   @override
   void initState() {
@@ -247,7 +251,7 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
 
   @override
   void dispose() {
-    _pollingTimer?.cancel(); // ✅ Отменяем таймер при удалении виджета
+    _pollingTimer?.cancel();
     super.dispose();
   }
 
@@ -263,7 +267,6 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
       widget.onPlayComplete?.call();
     }
 
-    // ✅ Сохраняем ссылку на таймер
     _pollingTimer = Timer(const Duration(milliseconds: 500), _checkPlaybackStatus);
   }
 
@@ -284,7 +287,6 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
         await TtsAudioPlayer.play(audioBytes, text: widget.text);
         if (mounted) {
           setState(() => _isPlaying = true);
-          _showMessage('Воспроизведение началось', isError: false);
         }
       } else if (mounted) {
         _showMessage('Не удалось синтезировать речь', isError: true);
@@ -338,6 +340,28 @@ class _TtsSpeechButtonState extends State<TtsSpeechButton> {
         tooltip: 'Остановить',
       );
     } else {
+      // ✅ Если showText = true, показываем кнопку с текстом
+      if (widget.showText) {
+        return GestureDetector(
+          onTap: _speak,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: widget.iconColor ?? const Color(0xFF0A4B47),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.volume_up, color: Colors.white, size: 18),
+                SizedBox(width: 4),
+                Text('Слушать', style: TextStyle(color: Colors.white, fontSize: 12)),
+              ],
+            ),
+          ),
+        );
+      }
+      // Иначе показываем только иконку
       return IconButton(
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),

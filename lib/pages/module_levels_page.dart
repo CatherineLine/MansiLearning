@@ -68,7 +68,6 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
         );
         return;
       }
-      final currentScore = await _getCurrentScore();
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -78,22 +77,10 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
             level: levelNumber,
             moduleTitle: widget.moduleTitle,
             tasks: tasks.map((t) => t.toMap()).toList(),
-            initialScore: currentScore,
           ),
         ),
       ).then((_) => _refreshData());
     }
-  }
-
-  Future<int> _getCurrentScore() async {
-    final progress = await AppDatabase.instance.getUserProgress(1);
-    int totalScore = 0;
-    for (var p in progress) {
-      if (p.sourceContext == 'task') {
-        totalScore += p.score;
-      }
-    }
-    return totalScore;
   }
 
   Future<bool> _hasTheoryForLevel(int levelId) async {
@@ -148,11 +135,7 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
                   if (progressSnapshot.hasData) {
                     for (var p in progressSnapshot.data!) {
                       if (p.sourceContext == 'task' && p.isCompleted && p.taskId != null) {
-                        for (var level in levels) {
-                          if (level.id == p.taskId) {
-                            completedLevelIds.add(level.id!);
-                          }
-                        }
+                        completedLevelIds.add(p.taskId!);
                       }
                     }
                   }

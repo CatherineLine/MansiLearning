@@ -50,7 +50,9 @@ dev_dependencies:
 
 flutter:
   assets:
+    - assets/learning_modules.json
     - assets/learning_content.json
     - assets/images/logo.png
     - assets/riddles.json
+    - assets/audio/
   uses-material-design: true

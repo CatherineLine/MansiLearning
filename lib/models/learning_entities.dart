@@ -75,6 +75,8 @@ class Task {
   final String type;
   final String correctAnswer;
   final String optionsJson;
+  final String? audioText;
+  final int points;
 
   Task({
     this.id,
@@ -84,6 +86,8 @@ class Task {
     required this.type,
     required this.correctAnswer,
     required this.optionsJson,
+    this.audioText,
+    this.points = 10,
   });
 
   Map<String, dynamic> toMap() => {
@@ -94,6 +98,8 @@ class Task {
     'type': type,
     'correct_answer': correctAnswer,
     'options_json': optionsJson,
+    'audio_text': audioText,
+    'points': points,
   };
 
   factory Task.fromMap(Map<String, dynamic> map) => Task(
@@ -104,5 +110,7 @@ class Task {
     type: map['type'],
     correctAnswer: map['correct_answer'],
     optionsJson: map['options_json'],
+    audioText: map['audio_text'],
+    points: map['points'] ?? 10,
   );
 }

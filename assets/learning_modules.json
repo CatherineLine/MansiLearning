@@ -1,0 +1,258 @@
+{
+  "modules": [
+    {
+      "id": 1,
+      "title": "Фонетика мансийского языка",
+      "description": "Изучение звуков, букв и произношения мансийского языка. В каждом уровне есть теория с возможностью прослушать звуки и одно задание на 10 баллов.",
+      "order_index": 1,
+      "levels": [
+        {
+          "id": 1,
+          "title": "Уровень 1: Краткие гласные (а, э, и, ы, у, о)",
+          "difficulty": "easy",
+          "theory": "<h2>📖 Краткие гласные мансийского языка</h2>\n\n<p>В мансийском языке есть <strong>6 кратких гласных</strong>:</p>\n\n<ul>\n<li><strong>а</strong> — как в русском 'а' → <tts>а</tts></li>\n<li><strong>э</strong> — как в русском 'э' → <tts>э</tts></li>\n<li><strong>и</strong> — как в русском 'и' → <tts>и</tts></li>\n<li><strong>ы</strong> — как в русском 'ы' → <tts>ы</tts></li>\n<li><strong>у</strong> — как в русском 'у' → <tts>у</tts></li>\n<li><strong>о</strong> — как в русском 'о' → <tts>о</tts></li>\n</ul>\n\n<p>💡 <strong>Важно:</strong> Краткие гласные произносятся коротко и отчётливо.</p>",
+          "tasks": [
+            {
+              "question_text": "Сколько кратких гласных в мансийском языке?",
+              "type": "single",
+              "correct_answer": "6",
+              "options_json": "[\"4\", \"5\", \"6\", \"7\"]",
+              "points": 10
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Уровень 2: Долгие гласные (а̄, э̄, ӣ, ы̄, ӯ, о̄)",
+          "difficulty": "easy",
+          "theory": "<h2>📖 Долгие гласные мансийского языка</h2>\n\n<p>В мансийском языке есть <strong>6 долгих гласных</strong> (отличаются от кратких по долготе и могут менять смысл слова):</p>\n\n<ul>\n<li><strong>а̄</strong> — долгий 'а' → <tts>а̄</tts></li>\n<li><strong>э̄</strong> — долгий 'э' → <tts>э̄</tts></li>\n<li><strong>ӣ</strong> — долгий 'и' → <tts>ӣ</tts></li>\n<li><strong>ы̄</strong> — долгий 'ы' → <tts>ы̄</tts></li>\n<li><strong>ӯ</strong> — долгий 'у' → <tts>ӯ</tts></li>\n<li><strong>о̄</strong> — долгий 'о' → <tts>о̄</tts></li>\n</ul>\n\n<p>⚠️ <strong>Важно!</strong> Долгота меняет смысл:</p>\n\n<ul>\n<li><tts>ас</tts> (дыра) — <tts>а̄с</tts> (Обь, большая река)</li>\n</ul>",
+          "tasks": [
+            {
+              "question_text": "Прослушайте слово и определите, какая это гласная:",
+              "type": "audio_recognition",
+              "correct_answer": "а̄",
+              "options_json": "[\"а\", \"а̄\", \"о\", \"у\"]",
+              "points": 10,
+              "audio_text": "а̄"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Уровень 3: Согласные звуки (обзор)",
+          "difficulty": "easy",
+          "theory": "<h2>📖 Согласные звуки мансийского языка</h2>\n\n<p>В мансийском языке <strong>17 согласных звуков</strong>: в, г, й, к, л, лʼ, м, н, нʼ, ӈ, п, р, с, сʼ, т, тʼ, х.</p>\n\n<p>В отличие от русского, в мансийском <strong>нет противопоставления по звонкости-глухости</strong>. Зато есть <strong>4 мягких согласных</strong>: лʼ, нʼ, сʼ, тʼ.</p>\n\n<p>🎧 <strong>Прослушайте примеры:</strong></p>\n\n<ul>\n<li><strong>вит</strong> (вода) → <tts>вит</tts></li>\n<li><strong>кол</strong> (дом) → <tts>кол</tts></li>\n<li><strong>нянь</strong> (хлеб) → <tts>нянь</tts></li>\n</ul>",
+          "tasks": [
+            {
+              "question_text": "Сколько согласных звуков в мансийском языке?",
+              "type": "single",
+              "correct_answer": "17",
+              "options_json": "[\"15\", \"16\", \"17\", \"18\"]",
+              "points": 10
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Уровень 4: Мягкие согласные (лʼ, нʼ, сʼ, тʼ)",
+          "difficulty": "medium",
+          "theory": "<h2>📖 Мягкие согласные мансийского языка</h2>\n\n<p>В мансийском языке <strong>4 мягких согласных</strong>, которые образуют пары с твёрдыми:</p>\n\n<ul>\n<li><strong>л — лʼ</strong>: <em>лāгыл</em> (нога) — <em>лям</em> (черёмуха)</li>\n<li><strong>н — нʼ</strong>: <em>нāн</em> (ты) — <em>нянь</em> (хлеб)</li>\n<li><strong>с — сʼ</strong>: <em>сāс</em> (береста) — <em>сясь</em> (тётя)</li>\n<li><strong>т — тʼ</strong>: <em>тāт</em> (там) — <em>тятя</em> (неловкий)</li>\n</ul>\n\n<p>🎧 <strong>Прослушайте пары:</strong></p>\n\n<ul>\n<li>л — лʼ: <tts>ла̄гыл</tts> — <tts>лям</tts></li>\n<li>н — нʼ: <tts>на̄н</tts> — <tts>нянь</tts></li>\n</ul>",
+          "tasks": [
+            {
+              "question_text": "Сколько мягких согласных в мансийском языке?",
+              "type": "single",
+              "correct_answer": "4",
+              "options_json": "[\"2\", \"3\", \"4\", \"5\"]",
+              "points": 10
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Уровень 5: Ударение",
+          "difficulty": "easy",
+          "theory": "<h2>📖 Ударение в мансийском языке</h2>\n\n<p>В мансийском языке ударение <strong>всегда падает на первый слог</strong>. Это одно из самых важных правил!</p>\n\n<p>🎧 <strong>Примеры:</strong></p>\n\n<ul>\n<li><strong>кóл</strong> (дом) → <tts>кол</tts></li>\n<li><strong>вúт</strong> (вода) → <tts>вит</tts></li>\n<li><strong>мáнь</strong> (маленький) → <tts>мань</tts></li>\n<li><strong>хáп</strong> (лодка) → <tts>хап</tts></li>\n</ul>\n\n<p>💡 Запомните: ударный слог всегда первый, независимо от длины слова.</p>",
+          "tasks": [
+            {
+              "question_text": "На какой слог падает ударение в мансийском языке?",
+              "type": "single",
+              "correct_answer": "На первый",
+              "options_json": "[\"На первый\", \"На последний\", \"На второй\", \"На любой\"]",
+              "points": 10
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Уровень 6: Смыслоразличение долгих и кратких гласных",
+          "difficulty": "medium",
+          "theory": "<h2>📖 Как долгота меняет смысл слова</h2>\n\n<p>В мансийском языке долгота гласного может полностью изменить значение слова. Это нужно запомнить!</p>\n\n<p>⚠️ <strong>Важнейшие пары:</strong></p>\n\n<ul>\n<li><tts>ас</tts> (дыра) — <tts>а̄с</tts> (Обь, большая река)</li>\n<li><tts>ат</tts> (запах) — <tts>а̄т</tts> (волос)</li>\n<li><tts>хус</tts> (звезда) — <tts>хӯс</tts> (двадцать)</li>\n</ul>\n\n<p>🎧 <strong>Прослушайте и запомните разницу:</strong></p>\n\n<ul>\n<li><tts>ас</tts> — <tts>а̄с</tts></li>\n<li><tts>ат</tts> — <tts>а̄т</tts></li>\n</ul>",
+          "tasks": [
+            {
+              "question_text": "Что означает слово 'а̄с'?",
+              "type": "single",
+              "correct_answer": "Обь (большая река)",
+              "options_json": "[\"дыра\", \"Обь (большая река)\", \"запах\", \"волос\"]",
+              "points": 10
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "title": "Уровень 7: Ассимиляция согласных",
+          "difficulty": "medium",
+          "theory": "<h2>📖 Ассимиляция (уподобление) согласных</h2>\n\n<p>В мансийском языке при добавлении суффиксов звук <strong>н</strong> может уподобляться следующему согласному.</p>\n\n<p>📌 <strong>Пример:</strong> <em>хансункве</em> (писать) → <em>хассум</em> (я писал). Звук 'н' превратился в 'с' перед другим 'с'.</p>\n\n<p><strong>Другие примеры:</strong></p>\n\n<ul>\n<li><em>понсункве</em> (созревать) → <em>поссыт</em> (они созрели)</li>\n<li><em>консункве</em> (царапать) → <em>коссум</em> (я царапал)</li>\n<li><em>ӧньсюӈкве</em> (иметь) → <em>ӧссылтаӈкве</em> (просить содержать)</li>\n</ul>\n\n<p>🎧 <strong>Прослушайте пример:</strong></p>\n\n<ul>\n<li><tts>хансункве</tts> → <tts>хассум</tts></li>\n</ul>",
+          "tasks": [
+            {
+              "question_text": "Какой тип ассимиляции характерен для мансийского языка?",
+              "type": "single",
+              "correct_answer": "Регрессивная",
+              "options_json": "[\"Прогрессивная\", \"Регрессивная\", \"Нулевая\", \"Полная\"]",
+              "points": 10
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "title": "Уровень 8: Алфавит и буквы",
+          "difficulty": "medium",
+          "theory": "<h2>📖 Алфавит мансийского языка</h2>\n\n<p>Алфавит мансийского языка состоит из <strong>44 букв</strong>. В его основу положен русский алфавит с добавлением специальных знаков.</p>\n\n<p>🔤 <strong>Специфические буквы:</strong></p>\n\n<ul>\n<li><strong>Ӈ, ӈ</strong> — заднеязычный носовой звук → <tts>ӈ</tts></li>\n<li><strong>Ӯ, ӯ</strong> — долгий 'у'</li>\n<li><strong>Ӣ, ӣ</strong> — долгий 'и'</li>\n<li><strong>Ӓ, ӓ</strong> — 'а' с умлаутом</li>\n<li><strong>Ӧ, ӧ</strong> — 'о' с умлаутом</li>\n</ul>\n\n<p>Для обозначения мягкости согласных используются буквы <strong>я, ё, ю, е, и</strong>.</p>",
+          "tasks": [
+            {
+              "question_text": "Сколько букв в алфавите мансийского языка?",
+              "type": "single",
+              "correct_answer": "44",
+              "options_json": "[\"33\", \"35\", \"40\", \"44\"]",
+              "points": 10
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "title": "Уровень 9: Практика — слушаем и записываем",
+          "difficulty": "hard",
+          "theory": "<h2>📖 Тренировка слуха и произношения</h2>\n\n<p>В этом уровне мы будем учиться различать звуки на слух. Прослушайте слова и запомните их произношение.</p>\n\n<p>🎧 <strong>Слова для тренировки:</strong></p>\n\n<ul>\n<li><em>ам</em> (я) → <tts>ам</tts></li>\n<li><em>наӊ</em> (ты) → <tts>наӊ</tts></li>\n<li><em>тав</em> (он) → <tts>тав</tts></li>\n<li><em>кол</em> (дом) → <tts>кол</tts></li>\n<li><em>вит</em> (вода) → <tts>вит</tts></li>\n<li><em>нянь</em> (хлеб) → <tts>нянь</tts></li>\n</ul>",
+          "tasks": [
+            {
+              "question_text": "Прослушайте слово и напишите его перевод:",
+              "type": "audio_write",
+              "correct_answer": "хлеб",
+              "options_json": "[]",
+              "points": 10,
+              "audio_text": "нянь"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "title": "Уровень 10: Итоговый тест по фонетике",
+          "difficulty": "hard",
+          "theory": "<h2>📖 Итоговый тест</h2>\n\n<p>Поздравляем! Вы прошли все уровни фонетики. Теперь проверьте свои знания.</p>\n\n<p>📌 <strong>Повторите основные правила:</strong></p>\n\n<ul>\n<li>Ударение всегда на первом слоге</li>\n<li>Есть долгие и краткие гласные (6 и 6)</li>\n<li>17 согласных, из них 4 мягких: лʼ, нʼ, сʼ, тʼ</li>\n<li>Ассимиляция: н → с перед с</li>\n<li>Алфавит состоит из 44 букв</li>\n</ul>\n\n<p>🎧 <strong>Прослушайте примеры:</strong></p>\n\n<ul>\n<li><tts>а</tts> — краткий, <tts>а̄</tts> — долгий</li>\n<li><tts>вит</tts> — вода, <tts>нянь</tts> — хлеб</li>\n</ul>",
+          "tasks": [
+            {
+              "question_text": "Выберите ВСЕ правильные утверждения о мансийской фонетике",
+              "type": "multiple",
+              "correct_answer": "[\"Ударение падает на первый слог\", \"В языке 6 кратких и 6 долгих гласных\", \"Есть 4 мягких согласных\"]",
+              "options_json": "[\"Ударение падает на первый слог\", \"Ударение всегда на последний слог\", \"В языке 6 кратких и 6 долгих гласных\", \"Долгота не меняет смысл слов\", \"Есть 4 мягких согласных\", \"В алфавите 33 буквы\"]",
+              "points": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Грамматика (число и местоимения)",
+      "description": "Изучение личных местоимений, двойственного числа и склонений. Модуль в разработке.",
+      "order_index": 2,
+      "levels": []
+    },
+    {
+      "id": 3,
+      "title": "Лексика (термины родства)",
+      "description": "Названия членов семьи и родственников на мансийском языке. Модуль в разработке.",
+      "order_index": 3,
+      "levels": []
+    },
+    {
+      "id": 4,
+      "title": "Предложения с именным сказуемым",
+      "description": "Как строить предложения типа 'кто есть кто' и 'что есть что'. Модуль в разработке.",
+      "order_index": 4,
+      "levels": []
+    },
+    {
+      "id": 5,
+      "title": "Разговорная тема 'Знакомство'",
+      "description": "Фразы и диалоги для знакомства на мансийском языке. Модуль в разработке.",
+      "order_index": 5,
+      "levels": []
+    },
+    {
+      "id": 6,
+      "title": "Суффиксы прилагательных",
+      "description": "Как образовывать прилагательные от существительных и глаголов. Модуль в разработке.",
+      "order_index": 6,
+      "levels": []
+    },
+    {
+      "id": 7,
+      "title": "Уменьшительные суффиксы",
+      "description": "Суффиксы -кве, -рись и их значение. Модуль в разработке.",
+      "order_index": 7,
+      "levels": []
+    },
+    {
+      "id": 8,
+      "title": "Притяжательное склонение",
+      "description": "Как сказать 'мой дом', 'твоя лодка', 'его олень'. Модуль в разработке.",
+      "order_index": 8,
+      "levels": []
+    },
+    {
+      "id": 9,
+      "title": "Местный падеж",
+      "description": "Как ответить на вопрос 'где?' (в лесу, на реке, в доме). Модуль в разработке.",
+      "order_index": 9,
+      "levels": []
+    },
+    {
+      "id": 10,
+      "title": "Предложения наличия и местонахождения",
+      "description": "Конструкции 'у меня есть', 'здесь находится'. Модуль в разработке.",
+      "order_index": 10,
+      "levels": []
+    }
+  ],
+  "media_assets": [
+    {"id": 1, "file_path": "tts_а", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 2, "file_path": "tts_э", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 3, "file_path": "tts_и", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 4, "file_path": "tts_ы", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 5, "file_path": "tts_у", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 6, "file_path": "tts_о", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 7, "file_path": "tts_а̄", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 8, "file_path": "tts_э̄", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 9, "file_path": "tts_ӣ", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 10, "file_path": "tts_ы̄", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 11, "file_path": "tts_ӯ", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 12, "file_path": "tts_о̄", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 13, "file_path": "tts_вит", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 14, "file_path": "tts_кол", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 15, "file_path": "tts_нянь", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 16, "file_path": "tts_ла̄гыл", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 17, "file_path": "tts_лям", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 18, "file_path": "tts_на̄н", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 19, "file_path": "tts_ас", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 20, "file_path": "tts_ат", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 21, "file_path": "tts_ам", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 22, "file_path": "tts_наӊ", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 23, "file_path": "tts_тав", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 24, "file_path": "tts_хап", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 25, "file_path": "tts_мань", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 26, "file_path": "tts_хус", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 27, "file_path": "tts_хӯс", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 28, "file_path": "tts_а̄т", "mime_type": "audio/wav", "duration_sec": 1},
+    {"id": 29, "file_path": "tts_ӈ", "mime_type": "audio/wav", "duration_sec": 1}
+  ]
+}

@@ -22,13 +22,14 @@ Future<void> _initializeDatabase() async {
     await db.database;
     await db.initLearningMaterials();
     debugPrint('✅ База данных инициализирована');
+
+    // ✅ Инициализируем TTS с задержкой
+    await Future.delayed(const Duration(seconds: 1));
+    await TtsAudioPlayer.init();
+    debugPrint('✅ TTS инициализирован');
   } catch (e) {
     debugPrint('❌ Ошибка инициализации БД: $e');
   }
-
-  Future.delayed(const Duration(seconds: 2), () {
-    TtsAudioPlayer.init().catchError((e) => debugPrint('TTS init error: $e'));
-  });
 }
 
 class MyApp extends StatelessWidget {

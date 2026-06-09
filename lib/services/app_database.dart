@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
@@ -23,111 +24,169 @@ class AppDatabase {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 15,
+      version: 16,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
-  }
-
-  Future<pb.UserProgress?> getLevelProgress(int userId, int levelId) async {
-    final db = await database;
-    final maps = await db.query(
-        'user_progress',
-        where: 'user_id = ? AND task_id = ? AND source_context = "task"',
-        whereArgs: [userId, levelId]
-    );
-    return maps.isNotEmpty ? pb.UserProgress.fromMap(maps.first) : null;
   }
 
   Future<void> _createDB(Database db, int version) async {
     const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
     const textType = 'TEXT NOT NULL';
     const integerType = 'INTEGER NOT NULL';
-    const booleanType = 'INTEGER NOT NULL';
 
     await db.execute('''CREATE TABLE users (id $idType, username $textType, created_at $textType, settings_json TEXT)''');
     await db.execute('''CREATE TABLE media_assets (id $idType, file_path $textType, mime_type $textType, duration_sec INTEGER, checksum TEXT)''');
     await db.execute('''CREATE TABLE modules (id $idType, title $textType, description TEXT, order_index $integerType)''');
     await db.execute('''CREATE TABLE levels (id $idType, module_id $integerType, title $textType, difficulty $textType, FOREIGN KEY (module_id) REFERENCES modules (id) ON DELETE CASCADE)''');
     await db.execute('''CREATE TABLE theory (id $idType, level_id $integerType, media_id INTEGER, content_html $textType, FOREIGN KEY (level_id) REFERENCES levels (id) ON DELETE CASCADE, FOREIGN KEY (media_id) REFERENCES media_assets (id) ON DELETE SET NULL)''');
-    await db.execute('''CREATE TABLE tasks (id $idType, level_id $integerType, media_id INTEGER, question_text $textType, type $textType, correct_answer $textType, options_json $textType, FOREIGN KEY (level_id) REFERENCES levels (id) ON DELETE CASCADE, FOREIGN KEY (media_id) REFERENCES media_assets (id) ON DELETE SET NULL)''');
+    await db.execute('''CREATE TABLE tasks (id $idType, level_id $integerType, media_id INTEGER, question_text $textType, type $textType, correct_answer $textType, options_json $textType, audio_text TEXT, points $integerType DEFAULT 10, FOREIGN KEY (level_id) REFERENCES levels (id) ON DELETE CASCADE, FOREIGN KEY (media_id) REFERENCES media_assets (id) ON DELETE SET NULL)''');
     await db.execute('''CREATE TABLE riddles (id $idType, question_text $textType, answer_text $textType, hint_text TEXT, difficulty_level $textType, category TEXT)''');
-    await db.execute('''CREATE TABLE user_progress (id $idType, user_id $integerType, task_id INTEGER, phrase_id INTEGER, riddle_id INTEGER, source_context $textType, is_completed $booleanType, attempts_count $integerType, score $integerType, last_attempt $textType, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL, FOREIGN KEY (riddle_id) REFERENCES riddles (id) ON DELETE SET NULL)''');
+    await db.execute('''CREATE TABLE user_progress (id $idType, user_id $integerType, task_id INTEGER, phrase_id INTEGER, riddle_id INTEGER, source_context $textType, is_completed $integerType, attempts_count $integerType, score $integerType, last_attempt $textType, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE SET NULL, FOREIGN KEY (riddle_id) REFERENCES riddles (id) ON DELETE SET NULL)''');
     await db.execute('''CREATE TABLE translation_sessions (id $idType, user_id $integerType, session_type $textType, started_at $textType, status $textType, FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE)''');
-    await db.execute('''CREATE TABLE translations (id $idType, session_id $integerType, source_text $textType, target_text $textType, source_lang $textType, target_lang $textType, is_favorite $booleanType, created_at TEXT, FOREIGN KEY (session_id) REFERENCES translation_sessions (id) ON DELETE CASCADE)''');
+    await db.execute('''CREATE TABLE translations (id $idType, session_id $integerType, source_text $textType, target_text $textType, source_lang $textType, target_lang $textType, is_favorite $integerType, created_at TEXT, FOREIGN KEY (session_id) REFERENCES translation_sessions (id) ON DELETE CASCADE)''');
     await db.execute('''CREATE TABLE documents (id $idType, session_id $integerType, original_file_path $textType, translated_file_path TEXT, file_format $textType, status $textType, uploaded_at $textType, FOREIGN KEY (session_id) REFERENCES translation_sessions (id) ON DELETE CASCADE)''');
     await db.execute('''CREATE TABLE phrase_categories (id $idType, name $textType, icon_resource $textType)''');
     await db.execute('''CREATE TABLE phrases (id $idType, category_id $integerType, media_id INTEGER, text_mansi $textType, text_russian $textType, transcription TEXT, FOREIGN KEY (category_id) REFERENCES phrase_categories (id) ON DELETE CASCADE, FOREIGN KEY (media_id) REFERENCES media_assets (id) ON DELETE SET NULL)''');
-    await db.execute('''CREATE TABLE user_phrasebook (user_id $integerType, phrase_id $integerType, is_favorite $booleanType, repetition_count $integerType, learned_at TEXT, PRIMARY KEY (user_id, phrase_id), FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, FOREIGN KEY (phrase_id) REFERENCES phrases (id) ON DELETE CASCADE)''');
+    await db.execute('''CREATE TABLE user_phrasebook (user_id $integerType, phrase_id $integerType, is_favorite $integerType, repetition_count $integerType, learned_at TEXT, PRIMARY KEY (user_id, phrase_id), FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, FOREIGN KEY (phrase_id) REFERENCES phrases (id) ON DELETE CASCADE)''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 3) {
-      await db.execute('''CREATE TABLE IF NOT EXISTS riddles (id INTEGER PRIMARY KEY AUTOINCREMENT, question_text TEXT NOT NULL, answer_text TEXT NOT NULL, hint_text TEXT, difficulty_level TEXT, category TEXT)''');
-      try { await db.execute('ALTER TABLE user_progress ADD COLUMN riddle_id INTEGER'); } catch (_) {}
-    }
-    if (oldVersion < 4) {
+    if (oldVersion < 16) {
+      // Добавляем колонку audio_text и points в таблицу tasks
       try {
-        await db.execute('ALTER TABLE translations ADD COLUMN created_at TEXT');
-        await db.execute('ALTER TABLE translations ADD COLUMN is_favorite INTEGER DEFAULT 0');
+        await db.execute('ALTER TABLE tasks ADD COLUMN audio_text TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN points INTEGER DEFAULT 10');
       } catch (_) {}
     }
-    if (oldVersion < 12) {
-      await initLearningMaterials();
-    }
-    // Миграция для версии 15: исправление correct_answer для multiple choice
+
     if (oldVersion < 15) {
       await _fixMultipleChoiceAnswers(db);
     }
   }
 
-  /// Исправление correct_answer для заданий multiple choice
   Future<void> _fixMultipleChoiceAnswers(Database db) async {
     try {
-      // Уровень 1, задание про органы речи
       await db.update('tasks', {
         'correct_answer': '["Губы, язык, гортань"]',
       }, where: 'level_id = ? AND question_text = ?', whereArgs: [1, 'Что из перечисленного относится к органам речи?']);
-
-      // Уровень 4, задание про мягкие согласные
-      await db.update('tasks', {
-        'correct_answer': '["л, нʼ, сʼ, т"]',
-      }, where: 'level_id = ? AND question_text = ?', whereArgs: [4, 'Какие согласные являются мягкими?']);
-
-      debugPrint('✅ Исправлены correct_answer для multiple choice');
     } catch (e) {
-      debugPrint('❌ Ошибка исправления: $e');
+      debugPrint('Ошибка исправления: $e');
+    }
+  }
+
+  /// Импорт модулей из JSON файла
+  Future<void> importModulesFromJson() async {
+    try {
+      final String jsonString = await rootBundle.loadString('assets/learning_modules.json');
+      final Map<String, dynamic> data = json.decode(jsonString);
+
+      final db = await database;
+
+      await db.transaction((txn) async {
+        // 1. Очищаем существующие данные (каскадно удалятся связанные записи)
+        await txn.delete('tasks');
+        await txn.delete('theory');
+        await txn.delete('levels');
+        await txn.delete('modules');
+        await txn.delete('media_assets');
+
+        // 2. Импортируем media_assets
+        final mediaAssets = data['media_assets'] as List<dynamic>?;
+        if (mediaAssets != null) {
+          for (var asset in mediaAssets) {
+            await txn.insert('media_assets', {
+              'id': asset['id'],
+              'file_path': asset['file_path'],
+              'mime_type': asset['mime_type'],
+              'duration_sec': asset['duration_sec'],
+              'checksum': asset['checksum'],
+            });
+          }
+        }
+
+        // 3. Импортируем модули и уровни
+        final modules = data['modules'] as List<dynamic>;
+        for (var module in modules) {
+          final moduleId = module['id'] as int;
+
+          await txn.insert('modules', {
+            'id': moduleId,
+            'title': module['title'],
+            'description': module['description'],
+            'order_index': module['order_index'],
+          });
+
+          final levels = module['levels'] as List<dynamic>?;
+          if (levels != null && levels.isNotEmpty) {
+            for (var level in levels) {
+              final levelId = level['id'] as int;
+
+              await txn.insert('levels', {
+                'id': levelId,
+                'module_id': moduleId,
+                'title': level['title'],
+                'difficulty': level['difficulty'],
+              });
+
+              // Импортируем теорию
+              final theoryHtml = level['theory'] as String?;
+              if (theoryHtml != null && theoryHtml.isNotEmpty) {
+                await txn.insert('theory', {
+                  'level_id': levelId,
+                  'content_html': theoryHtml,
+                  'media_id': null,
+                });
+              }
+
+              // Импортируем задания
+              final tasks = level['tasks'] as List<dynamic>?;
+              if (tasks != null && tasks.isNotEmpty) {
+                for (var task in tasks) {
+                  await txn.insert('tasks', {
+                    'level_id': levelId,
+                    'question_text': task['question_text'],
+                    'type': task['type'],
+                    'correct_answer': task['correct_answer'],
+                    'options_json': task['options_json'] is List
+                        ? json.encode(task['options_json'])
+                        : task['options_json'],
+                    'audio_text': task['audio_text'],
+                    'points': task['points'] ?? 10,
+                    'media_id': task['media_id'],
+                  });
+                }
+              }
+            }
+          }
+        }
+      });
+
+      debugPrint('✅ Модули успешно импортированы из JSON');
+    } catch (e, stack) {
+      debugPrint('❌ Ошибка импорта модулей: $e');
+      debugPrint(stack.toString());
     }
   }
 
   /// Переключить статус избранного для перевода
   Future<void> toggleFavoriteTranslation(int translationId, bool isFavorite) async {
     final db = await database;
-    await db.update(
-      'translations',
-      {'is_favorite': isFavorite ? 1 : 0},
-      where: 'id = ?',
-      whereArgs: [translationId],
-    );
+    await db.update('translations', {'is_favorite': isFavorite ? 1 : 0}, where: 'id = ?', whereArgs: [translationId]);
   }
 
-  /// Получить избранные переводы
   Future<List<Map<String, dynamic>>> getFavoriteTranslations() async {
     final db = await database;
-    return await db.query(
-      'translations',
-      where: 'is_favorite = 1',
-      orderBy: 'created_at DESC',
-    );
+    return await db.query('translations', where: 'is_favorite = 1', orderBy: 'created_at DESC');
   }
 
-  /// Удалить перевод по id
   Future<void> deleteTranslation(int translationId) async {
     final db = await database;
     await db.delete('translations', where: 'id = ?', whereArgs: [translationId]);
   }
 
-  /// Очистить все избранное
   Future<void> clearAllFavorites() async {
     final db = await database;
     await db.update('translations', {'is_favorite': 0}, where: 'is_favorite = 1');
@@ -137,197 +196,7 @@ class AppDatabase {
     final db = await database;
     var moduleCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM modules'));
     if (moduleCount == 0) {
-      await db.insert('modules', {'id': 1, 'title': 'Фонетика мансийского языка', 'description': 'Изучение звуков мансийского языка', 'order_index': 1});
-      await db.insert('levels', {'id': 1, 'module_id': 1, 'title': 'Уровень 1: Введение в фонетику', 'difficulty': 'easy'});
-      await db.insert('levels', {'id': 2, 'module_id': 1, 'title': 'Уровень 2: Гласные звуки', 'difficulty': 'easy'});
-      await db.insert('levels', {'id': 3, 'module_id': 1, 'title': 'Уровень 3: Согласные звуки', 'difficulty': 'easy'});
-      await db.insert('levels', {'id': 4, 'module_id': 1, 'title': 'Уровень 4: Мягкие согласные', 'difficulty': 'easy'});
-      await db.insert('levels', {'id': 5, 'module_id': 1, 'title': 'Уровень 5: Ударение', 'difficulty': 'easy'});
-      await db.insert('levels', {'id': 6, 'module_id': 1, 'title': 'Уровень 6: Фонетические закономерности', 'difficulty': 'medium'});
-      await db.insert('levels', {'id': 7, 'module_id': 1, 'title': 'Уровень 7: Алфавит', 'difficulty': 'medium'});
-
-      await db.insert('theory', {'level_id': 1, 'content_html': '<h2>§ 1. Общие сведения</h2><p>Раздел науки о языке, в котором изучаются звуки, называется <strong>фонетикой</strong>.</p><p>Звуки речи на письме обозначаются буквами. Соответствие между буквами и звуками называется <strong>графикой</strong>.</p>'});
-      await db.insert('theory', {'level_id': 2, 'content_html': '<h2>§ 2. Гласные звуки</h2><p>В мансийском языке различаются <strong>долгие и краткие</strong> гласные.</p><p><strong>Краткие:</strong> а, э, и, ы, у, о</p><p><strong>Долгие:</strong> ā, э̄, ӣ, ы, ӯ, о̄</p>'});
-      await db.insert('theory', {'level_id': 3, 'content_html': '<h2>§ 3. Согласные звуки</h2><p>В мансийском языке <strong>17 согласных звуков</strong>: в, г, й, к, л, лʼ, м, н, нʼ, ӈ, п, р, с, сʼ, т, тʼ, х.</p>'});
-      await db.insert('theory', {'level_id': 4, 'content_html': '<h2>§ 4. Мягкие согласные</h2><p>В мансийском языке <strong>4 мягких согласных</strong>: лʼ, нʼ, сʼ, тʼ.</p>'});
-      await db.insert('theory', {'level_id': 5, 'content_html': '<h2>§ 5. Ударение</h2><p>Ударение <strong>всегда падает на первый слог</strong>.</p>'});
-      await db.insert('theory', {'level_id': 6, 'content_html': '<h2>§ 6. Фонетические закономерности</h2><p><strong>Ассимиляция:</strong> хансункве → хассум</p>'});
-      await db.insert('theory', {'level_id': 7, 'content_html': '<h2>§ 7. Алфавит</h2><p>Алфавит мансийского языка состоит из <strong>44 букв</strong>.</p>'});
-
-      // Уровень 1
-      await db.insert('tasks', {
-        'level_id': 1,
-        'question_text': 'Что называется фонетикой?',
-        'type': 'single',
-        'correct_answer': 'Раздел науки о языке, в котором изучаются звуки речи',
-        'options_json': '["Раздел науки о языке, в котором изучаются звуки речи", "Раздел о частях речи", "Раздел о предложениях", "Раздел о текстах"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 1,
-        'question_text': 'Что из перечисленного относится к органам речи?',
-        'type': 'multiple',
-        'correct_answer': '["Губы, язык, гортань"]',
-        'options_json': '["Губы, язык, гортань", "Руки, ноги, голова", "Глаза, уши, нос", "Сердце, лёгкие"]'
-      });
-
-      // Уровень 2
-      await db.insert('tasks', {
-        'level_id': 2,
-        'question_text': 'Какие гласные различаются в мансийском языке?',
-        'type': 'single',
-        'correct_answer': 'долгие и краткие',
-        'options_json': '["долгие и краткие", "ударные и безударные", "открытые и закрытые", "носовые и неносовые"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 2,
-        'question_text': 'В каком слове есть долгий гласный ā?',
-        'type': 'single',
-        'correct_answer': 'āви',
-        'options_json': '["ас", "ат", "āви", "амп"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 2,
-        'question_text': 'Какое слово означает "дыра"?',
-        'type': 'single',
-        'correct_answer': 'ас',
-        'options_json': '["ас", "āс", "ат", "āт"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 2,
-        'question_text': 'Какое слово означает "большая река" (Обь)?',
-        'type': 'single',
-        'correct_answer': 'āс',
-        'options_json': '["ас", "āс", "ат", "āт"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 2,
-        'question_text': 'Сколько кратких гласных в мансийском языке?',
-        'type': 'single',
-        'correct_answer': '6',
-        'options_json': '["4", "5", "6", "7"]'
-      });
-
-      // Уровень 3
-      await db.insert('tasks', {
-        'level_id': 3,
-        'question_text': 'Сколько согласных фонем в мансийском языке?',
-        'type': 'single',
-        'correct_answer': '17',
-        'options_json': '["15", "16", "17", "18"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 3,
-        'question_text': 'В мансийском языке есть противопоставление согласных по звонкости-глухости.',
-        'type': 'true_false',
-        'correct_answer': 'false',
-        'options_json': '["true", "false"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 3,
-        'question_text': 'Как переводится слово "вит"?',
-        'type': 'single',
-        'correct_answer': 'Вода',
-        'options_json': '["Огонь", "Вода", "Земля", "Дом"]'
-      });
-
-      // Уровень 4
-      await db.insert('tasks', {
-        'level_id': 4,
-        'question_text': 'Сколько мягких согласных в мансийском языке?',
-        'type': 'single',
-        'correct_answer': '4',
-        'options_json': '["2", "3", "4", "5"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 4,
-        'question_text': 'Какие согласные являются мягкими?',
-        'type': 'multiple',
-        'correct_answer': '["лʼ, нʼ, сʼ, тʼ"]',
-        'options_json': '["лʼ, нʼ, сʼ, тʼ", "м, н, ӈ, р", "п, в, к, г", "с, з, ш, ж"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 4,
-        'question_text': 'Какую пару образует мягкий согласный лʼ?',
-        'type': 'single',
-        'correct_answer': 'л',
-        'options_json': '["л", "н", "м", "р"]'
-      });
-
-      // Уровень 5
-      await db.insert('tasks', {
-        'level_id': 5,
-        'question_text': 'На какой слог падает ударение в мансийском языке?',
-        'type': 'single',
-        'correct_answer': 'На первый',
-        'options_json': '["На первый", "На последний", "На второй", "На любой"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 5,
-        'question_text': 'Как переводится слово "кол"?',
-        'type': 'single',
-        'correct_answer': 'Дом',
-        'options_json': '["Лес", "Река", "Дом", "Гора"]'
-      });
-
-      // Уровень 6
-      await db.insert('tasks', {
-        'level_id': 6,
-        'question_text': 'Какой тип ассимиляции характерен для мансийского языка?',
-        'type': 'single',
-        'correct_answer': 'Регрессивная',
-        'options_json': '["Прогрессивная", "Регрессивная", "Нулевая", "Полная"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 6,
-        'question_text': 'Как переводится слово "хассум"?',
-        'type': 'single',
-        'correct_answer': 'Я писал',
-        'options_json': '["Я пишу", "Я писал", "Ты пишешь", "Он пишет"]'
-      });
-
-      // Уровень 7
-      await db.insert('tasks', {
-        'level_id': 7,
-        'question_text': 'Сколько букв в алфавите мансийского языка?',
-        'type': 'single',
-        'correct_answer': '44',
-        'options_json': '["33", "35", "40", "44"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 7,
-        'question_text': 'Какая буква обозначает заднеязычный носовой звук?',
-        'type': 'single',
-        'correct_answer': 'Ӈ',
-        'options_json': '["Ӈ", "Ӯ", "Я̄", "Ы"]'
-      });
-      await db.insert('tasks', {
-        'level_id': 7,
-        'question_text': 'В основу мансийской графики положен алфавит какого языка?',
-        'type': 'single',
-        'correct_answer': 'Русского',
-        'options_json': '["Английского", "Немецкого", "Русского", "Латинского"]'
-      });
-    }
-
-    var categoryCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM phrase_categories'));
-    if (categoryCount == 0) {
-      final categories = ['Приветствия и прощания', 'Основные фразы', 'Числа и время', 'Еда и напитки', 'Покупки', 'Транспорт', 'Отель и жильё', 'Экскурсии и достопримечательности', 'Здоровье и аптека', 'Экстренные ситуации'];
-      for (var cat in categories) {
-        await db.insert('phrase_categories', {'name': cat, 'icon_resource': 'default'});
-      }
-      await db.insert('phrases', {'category_id': 1, 'text_russian': 'Здравствуйте', 'text_mansi': 'Пася олэн'});
-      await db.insert('phrases', {'category_id': 1, 'text_russian': 'Доброе утро', 'text_mansi': 'Хулпас олэн'});
-      await db.insert('phrases', {'category_id': 1, 'text_russian': 'До свидания', 'text_mansi': 'Ащ путир'});
-      await db.insert('phrases', {'category_id': 1, 'text_russian': 'Спасибо', 'text_mansi': 'Пумасипа'});
-      await db.insert('phrases', {'category_id': 2, 'text_russian': 'Да', 'text_mansi': 'Таӈх'});
-      await db.insert('phrases', {'category_id': 2, 'text_russian': 'Нет', 'text_mansi': 'Ати'});
-      await db.insert('phrases', {'category_id': 2, 'text_russian': 'Пожалуйста', 'text_mansi': 'Яныг пася'});
-      await db.insert('phrases', {'category_id': 2, 'text_russian': 'Извините', 'text_mansi': 'Мен олэн'});
-    }
-
-    var sessionExists = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM translation_sessions WHERE id = 1'));
-    if (sessionExists == 0) {
-      await db.insert('translation_sessions', {'id': 1, 'user_id': 1, 'session_type': 'default', 'started_at': DateTime.now().toIso8601String(), 'status': 'active'});
+      await importModulesFromJson();
     }
   }
 
@@ -394,7 +263,11 @@ class AppDatabase {
 
   Future<int> getUserTotalScore(int userId) async {
     final db = await database;
-    var result = await db.rawQuery('SELECT SUM(score) as total FROM user_progress WHERE user_id = ?', [userId]);
+    var result = await db.rawQuery('''
+    SELECT SUM(score) as total 
+    FROM user_progress 
+    WHERE user_id = ? AND (source_context = 'task' OR source_context = 'riddle')
+  ''', [userId]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
@@ -472,6 +345,16 @@ class AppDatabase {
     if (searchQuery != null && searchQuery.isNotEmpty) { whereParts.add('(source_text LIKE ? OR target_text LIKE ?)'); whereArgs.addAll(['%$searchQuery%', '%$searchQuery%']); }
     final whereClause = whereParts.isNotEmpty ? whereParts.join(' AND ') : null;
     return await db.query('translations', where: whereClause, whereArgs: whereArgs.isNotEmpty ? whereArgs : null, orderBy: 'created_at DESC', limit: 500);
+  }
+
+  Future<int> getCompletedLevelsCount(int userId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+    SELECT COUNT(DISTINCT task_id) as count 
+    FROM user_progress 
+    WHERE user_id = ? AND source_context = 'task' AND is_completed = 1
+  ''', [userId]);
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<void> clearTranslationHistory() async {
