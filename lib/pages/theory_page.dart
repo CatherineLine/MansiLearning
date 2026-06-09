@@ -49,60 +49,38 @@ class _TheoryPageState extends State<TheoryPage> {
       final audioBytes = await _voiceCache.getOrSynthesize(text);
       if (audioBytes != null) {
         await TtsAudioPlayer.play(audioBytes, text: text);
-        debugPrint('✅ Воспроизведение начато для: $text');
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Не удалось озвучить'), backgroundColor: Colors.red),
-          );
-        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось озвучить'), backgroundColor: Colors.red),
+        );
       }
     } catch (e) {
       debugPrint('❌ Ошибка: $e');
     }
   }
 
+  /// Парсит HTML и создаёт виджеты с поддержкой <tts>
   Widget _parseHtmlToWidget(String html) {
     final List<Widget> widgets = [];
     String remaining = html;
 
-    // Заменяем <tts>текст</tts> на кнопки
     while (remaining.isNotEmpty) {
       final ttsStart = remaining.indexOf('<tts>');
+
       if (ttsStart == -1) {
-        // Нет больше тегов — добавляем остальной текст
-        final cleanText = remaining
-            .replaceAll(RegExp(r'<[^>]+>'), '')
-            .trim();
+        // Нет больше тегов — добавляем остальной текст с базовым форматированием
+        final cleanText = _cleanHtmlTags(remaining);
         if (cleanText.isNotEmpty) {
-          widgets.add(
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                cleanText,
-                style: const TextStyle(fontSize: 16, height: 1.4),
-              ),
-            ),
-          );
+          widgets.addAll(_buildTextWithFormatting(cleanText));
         }
         break;
       }
 
       // Добавляем текст перед тегом
       if (ttsStart > 0) {
-        final beforeText = remaining.substring(0, ttsStart)
-            .replaceAll(RegExp(r'<[^>]+>'), '')
-            .trim();
+        final beforeText = _cleanHtmlTags(remaining.substring(0, ttsStart));
         if (beforeText.isNotEmpty) {
-          widgets.add(
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                beforeText,
-                style: const TextStyle(fontSize: 16, height: 1.4),
-              ),
-            ),
-          );
+          widgets.addAll(_buildTextWithFormatting(beforeText));
         }
       }
 
@@ -115,15 +93,18 @@ class _TheoryPageState extends State<TheoryPage> {
       if (ttsText.isNotEmpty) {
         widgets.add(
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: ElevatedButton.icon(
               onPressed: () => _speakText(ttsText),
-              icon: const Icon(Icons.volume_up, size: 18),
-              label: Text(ttsText, style: const TextStyle(fontSize: 16)),
+              icon: const Icon(Icons.volume_up, size: 20),
+              label: Text(
+                ttsText,
+                style: const TextStyle(fontSize: 16),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0A4B47),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -141,6 +122,92 @@ class _TheoryPageState extends State<TheoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: widgets,
     );
+  }
+
+  /// Очищает HTML-теги и возвращает чистый текст
+  String _cleanHtmlTags(String html) {
+    String result = html;
+    // Удаляем все HTML-теги
+    result = result.replaceAll(RegExp(r'<[^>]+>'), '');
+    // Заменяем множественные пробелы и переносы на один пробел
+    result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return result;
+  }
+
+  /// Создаёт виджеты текста с базовым форматированием (заголовки, списки)
+  List<Widget> _buildTextWithFormatting(String text) {
+    final List<Widget> widgets = [];
+    final lines = text.split('\n');
+
+    for (var line in lines) {
+      line = line.trim();
+      if (line.isEmpty) continue;
+
+      // Определяем заголовки по маркерам
+      if (line.startsWith('##')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Text(
+              line.replaceFirst('##', '').trim(),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0A4B47),
+              ),
+            ),
+          ),
+        );
+      } else if (line.startsWith('#')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 8),
+            child: Text(
+              line.replaceFirst('#', '').trim(),
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0A4B47),
+              ),
+            ),
+          ),
+        );
+      }
+      // Обрабатываем маркированные списки
+      else if (line.startsWith('-') || line.startsWith('•')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• ', style: TextStyle(fontSize: 16)),
+                Expanded(
+                  child: Text(
+                    line.replaceFirst(RegExp(r'^[-•]'), '').trim(),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      // Обычный текст
+      else {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              line,
+              style: const TextStyle(fontSize: 16, height: 1.4),
+            ),
+          ),
+        );
+      }
+    }
+
+    return widgets;
   }
 
   @override

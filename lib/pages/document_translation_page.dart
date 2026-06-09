@@ -14,7 +14,6 @@ class DocumentTranslationPage extends StatefulWidget {
 class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
   final FileTranslationService _translationService = FileTranslationService();
   bool _isTranslating = false;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -74,7 +73,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
     final isCompleted = currentProgress == 100;
 
     return BaseScaffold(
-      scaffoldKey: _scaffoldKey,
       appBar: AppBar(
         title: const Text(
           'Перевод документов',
@@ -86,7 +84,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+            onPressed: () => Scaffold.of(context).openEndDrawer(),
           ),
         ],
       ),

@@ -24,7 +24,6 @@ class ModuleLevelsPage extends StatefulWidget {
 
 class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
   late Future<List<Level>> levelsFuture;
-  late Future<List<pb.UserProgress>> userProgressFuture;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -33,17 +32,31 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
     _refreshData();
   }
 
-  void _refreshData() {
-    levelsFuture = AppDatabase.instance.getModuleLevels(widget.moduleId);
-    userProgressFuture = AppDatabase.instance.getUserProgress(1);
-    setState(() {});
+  Future<void> _refreshData() async {
+    setState(() {
+      levelsFuture = AppDatabase.instance.getModuleLevels(widget.moduleId);
+    });
   }
 
   Future<void> _goToMainMenu() async {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => MainMenuPage()),
+      MaterialPageRoute(builder: (context) => const MainMenuPage()),
     );
+  }
+
+  Future<double> _getLevelProgress(int levelId) async {
+    final tasks = await AppDatabase.instance.getTasks(levelId);
+    if (tasks.isEmpty) return 0.0;
+
+    final progressList = await AppDatabase.instance.getUserProgress(1);
+    final completedTaskIds = progressList
+        .where((p) => p.sourceContext == 'task' && p.isCompleted && p.taskId != null)
+        .map((p) => p.taskId!)
+        .toSet();
+
+    int completedCount = tasks.where((task) => completedTaskIds.contains(task.id)).length;
+    return completedCount / tasks.length;
   }
 
   Future<void> _startLevel(BuildContext context, int levelId, int levelNumber) async {
@@ -115,9 +128,7 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
         ),
         endDrawer: const AppDrawer(activeSection: DrawerActiveSection.learning),
         body: RefreshIndicator(
-          onRefresh: () async {
-            _refreshData();
-          },
+          onRefresh: _refreshData,
           child: FutureBuilder<List<Level>>(
             future: levelsFuture,
             builder: (context, snapshot) {
@@ -128,32 +139,22 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
                 return Center(child: Text('Ошибка загрузки: ${snapshot.error}'));
               }
               final levels = snapshot.data ?? [];
-              return FutureBuilder<List<pb.UserProgress>>(
-                future: userProgressFuture,
-                builder: (context, progressSnapshot) {
-                  final completedLevelIds = <int>{};
-                  if (progressSnapshot.hasData) {
-                    for (var p in progressSnapshot.data!) {
-                      if (p.sourceContext == 'task' && p.isCompleted && p.taskId != null) {
-                        completedLevelIds.add(p.taskId!);
-                      }
-                    }
-                  }
 
-                  int maxCompletedLevelId = 0;
-                  for (var level in levels) {
-                    if (completedLevelIds.contains(level.id)) {
-                      if ((level.id ?? 0) > maxCompletedLevelId) {
-                        maxCompletedLevelId = level.id ?? 0;
-                      }
+              // Определяем максимальный пройденный уровень для разблокировки
+              return FutureBuilder<List<int>>(
+                future: Future.wait(levels.map((l) => _getLevelProgress(l.id!).then((p) => p >= 1.0 ? l.id! : -1))),
+                builder: (context, completedSnapshot) {
+                  final completedLevelIds = <int>{};
+                  if (completedSnapshot.hasData) {
+                    for (var id in completedSnapshot.data!) {
+                      if (id != -1) completedLevelIds.add(id);
                     }
                   }
 
                   int maxCompletedIndex = -1;
                   for (int i = 0; i < levels.length; i++) {
-                    if (levels[i].id == maxCompletedLevelId) {
+                    if (completedLevelIds.contains(levels[i].id)) {
                       maxCompletedIndex = i;
-                      break;
                     }
                   }
 
@@ -163,32 +164,45 @@ class _ModuleLevelsPageState extends State<ModuleLevelsPage> {
                     itemBuilder: (context, index) {
                       final level = levels[index];
                       final levelId = level.id ?? 0;
-                      final isCompleted = completedLevelIds.contains(levelId);
                       final isUnlocked = index == 0 || index <= maxCompletedIndex + 1;
 
-                      return Card(
-                        elevation: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        child: ListTile(
-                          title: Text(
-                            level.title,
-                            style: const TextStyle(fontSize: 18),
-                          ),
-                          subtitle: isCompleted
-                              ? const Text('✅ Пройден', style: TextStyle(color: Colors.green))
-                              : (!isUnlocked
-                              ? const Text('🔒 Заблокирован', style: TextStyle(color: Colors.grey))
-                              : const Text('📚 Доступен', style: TextStyle(color: Color(0xFF0A4B47)))),
-                          trailing: isCompleted
-                              ? const Icon(Icons.check_circle, color: Colors.green)
-                              : const Icon(Icons.arrow_forward),
-                          enabled: isUnlocked,
-                          onTap: isUnlocked
-                              ? () {
-                            _startLevel(context, levelId, index + 1);
-                          }
-                              : null,
-                        ),
+                      return FutureBuilder<double>(
+                        future: _getLevelProgress(levelId),
+                        builder: (context, progressSnapshot) {
+                          final progress = progressSnapshot.data ?? 0.0;
+                          final percent = (progress * 100).round();
+                          final isFullyCompleted = progress >= 1.0;
+
+                          return Card(
+                            elevation: 4,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              title: Text(
+                                level.title,
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                              subtitle: Text(
+                                isFullyCompleted
+                                    ? '✅ Пройдено на 100%'
+                                    : (isUnlocked ? '📚 Пройдено на $percent%' : '🔒 Заблокировано'),
+                                style: TextStyle(
+                                  color: isFullyCompleted
+                                      ? Colors.green
+                                      : (isUnlocked ? const Color(0xFF0A4B47) : Colors.grey),
+                                ),
+                              ),
+                              trailing: isFullyCompleted
+                                  ? const Icon(Icons.check_circle, color: Colors.green)
+                                  : (isUnlocked ? const Icon(Icons.arrow_forward) : const Icon(Icons.lock)),
+                              enabled: isUnlocked,
+                              onTap: isUnlocked
+                                  ? () {
+                                _startLevel(context, levelId, index + 1);
+                              }
+                                  : null,
+                            ),
+                          );
+                        },
                       );
                     },
                   );

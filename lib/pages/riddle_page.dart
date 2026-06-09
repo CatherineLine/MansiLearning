@@ -1,4 +1,3 @@
-// riddle_page.dart (обновлённая версия)
 import 'package:flutter/material.dart';
 import '../base_scafford.dart';
 import '../services/app_database.dart';
@@ -94,6 +93,7 @@ class _RiddlePageState extends State<RiddlePage> {
               'Недостаточно очков',
               style: TextStyle(color: Color(0xFF0A4B47), fontWeight: FontWeight.bold),
             ),
+            // ✅ Исправлено: child -> content
             content: Text(
               'Для следующей загадки нужно $nextRequiredScore очков.\n'
                   'У вас: $currentScore очков.\n\n'
@@ -142,6 +142,7 @@ class _RiddlePageState extends State<RiddlePage> {
             'Поздравляем!',
             style: TextStyle(color: Color(0xFF0A4B47), fontWeight: FontWeight.bold),
           ),
+          // ✅ Исправлено: child -> content
           content: const Text('Вы решили все загадки!'),
           actions: [
             TextButton(
@@ -225,7 +226,6 @@ class _RiddlePageState extends State<RiddlePage> {
         ],
       ),
       body: SafeArea(
-        // SafeArea обеспечивает отступ от системных кнопок
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -482,7 +482,6 @@ class _RiddlePageState extends State<RiddlePage> {
                   ),
                 ),
               ),
-              // Отступ снизу для безопасной зоны
               const SizedBox(height: 12),
             ],
           ),

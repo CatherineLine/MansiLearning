@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../base_scafford.dart';
 import '../models/learning_entities.dart';
-import '../models/phrasebook_entities.dart';
+import '../models/phrasebook_entities.dart' as pb;
 import '../services/app_database.dart';
 import '../services/voice_cash_service.dart';
 import '../services/tts_api_service.dart';
@@ -44,6 +44,9 @@ class _TaskPageState extends State<TaskPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final List<bool> _taskResults = [];
 
+  // ✅ Храним ID заданий, которые уже были пройдены (чтобы не начислять очки повторно)
+  Set<int> _alreadyCompletedTaskIds = {};
+
   final VoiceCacheService _voiceCache = VoiceCacheService();
   bool _isAudioLoading = false;
 
@@ -52,6 +55,18 @@ class _TaskPageState extends State<TaskPage> {
     super.initState();
     _tasksFuture = Future.value(widget.tasks.map((t) => Task.fromMap(t)).toList());
     _voiceCache.init();
+    _loadAlreadyCompletedTasks();
+  }
+
+  Future<void> _loadAlreadyCompletedTasks() async {
+    final existingProgress = await AppDatabase.instance.getUserProgress(1);
+    final completed = existingProgress
+        .where((p) => p.sourceContext == 'task' && p.isCompleted && p.taskId != null)
+        .map((p) => p.taskId!)
+        .toSet();
+    setState(() {
+      _alreadyCompletedTaskIds = completed;
+    });
   }
 
   @override
@@ -131,6 +146,14 @@ class _TaskPageState extends State<TaskPage> {
         _taskResults.add(true);
         _showSuccess = true;
         debugPrint('✅ Правильно!');
+
+        // ✅ Сохраняем прогресс с очками только если задание ещё не было пройдено
+        if (!_alreadyCompletedTaskIds.contains(currentTask.id)) {
+          _saveTaskProgress(currentTask.id!, currentTask.points);
+          _alreadyCompletedTaskIds.add(currentTask.id!);
+        } else {
+          debugPrint('⚠️ Задание уже было пройдено, очки повторно не начисляются');
+        }
       } else {
         _taskResults.add(false);
         _showSuccess = false;
@@ -139,18 +162,54 @@ class _TaskPageState extends State<TaskPage> {
     });
   }
 
-  Future<void> _saveProgress() async {
+  Future<void> _saveTaskProgress(int taskId, int points) async {
+    final existingProgress = await AppDatabase.instance.getUserProgress(1);
+    final existingForTask = existingProgress.firstWhere(
+          (p) => p.taskId == taskId && p.sourceContext == 'task',
+      orElse: () => pb.UserProgress(userId: 1, taskId: taskId, sourceContext: 'task'),
+    );
+
+    // ✅ Если задание уже было пройдено — не начисляем очки повторно
+    if (existingForTask.isCompleted) {
+      debugPrint('⚠️ Задание $taskId уже пройдено, очки не начисляются');
+      return;
+    }
+
+    await AppDatabase.instance.saveUserProgress(pb.UserProgress(
+      id: existingForTask.id,
+      userId: 1,
+      taskId: taskId,
+      riddleId: null,
+      sourceContext: 'task',
+      isCompleted: true,
+      attemptsCount: existingForTask.attemptsCount + 1,
+      score: points, // ✅ Сохраняем очки за задание!
+    ));
+
+    debugPrint('💰 Начислено $points очков за задание $taskId');
+  }
+
+  Future<void> _saveLevelProgress() async {
     if (_levelCompleted || _levelProgressSaved) return;
 
     _levelCompleted = true;
     _levelProgressSaved = true;
 
-    // ✅ Проверяем, все ли задания решены правильно
-    final allTasksCompleted = _taskResults.length == widget.tasks.length &&
+    // Проверяем, все ли задания решены правильно
+    final tasks = await _tasksFuture;
+    final allTasksCompleted = _taskResults.length == tasks.length &&
         _taskResults.every((result) => result == true);
 
     if (!allTasksCompleted) {
       debugPrint('⚠️ Уровень ${widget.levelId} НЕ пройден (есть ошибки)');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Уровень не пройден! Нужно решить все задания правильно.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
       return;
     }
 
@@ -158,20 +217,20 @@ class _TaskPageState extends State<TaskPage> {
 
     final existingProgress = await AppDatabase.instance.getUserProgress(1);
     final existingForLevel = existingProgress.firstWhere(
-          (p) => p.taskId == widget.levelId && p.sourceContext == 'task',
-      orElse: () => UserProgress(userId: 1, taskId: widget.levelId, sourceContext: 'task'),
+          (p) => p.taskId == widget.levelId && p.sourceContext == 'level',
+      orElse: () => pb.UserProgress(userId: 1, taskId: widget.levelId, sourceContext: 'level'),
     );
 
-    // ✅ Сохраняем ТОЛЬКО факт прохождения, score не трогаем
-    await AppDatabase.instance.saveUserProgress(UserProgress(
+    // ✅ Уровень не даёт очков, только задания
+    await AppDatabase.instance.saveUserProgress(pb.UserProgress(
       id: existingForLevel.id,
       userId: 1,
       taskId: widget.levelId,
       riddleId: null,
-      sourceContext: 'task',
+      sourceContext: 'level',
       isCompleted: true,
       attemptsCount: (existingForLevel.attemptsCount + 1),
-      score: 0,  // Не храним очки в БД
+      score: 0,
     ));
   }
 
@@ -188,7 +247,7 @@ class _TaskPageState extends State<TaskPage> {
           _textAnswer = '';
         });
       } else {
-        await _saveProgress();
+        await _saveLevelProgress();
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -345,7 +404,7 @@ class _TaskPageState extends State<TaskPage> {
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
         if (!_levelCompleted && _answerChecked && !_levelProgressSaved) {
-          await _saveProgress();
+          await _saveLevelProgress();
         }
       },
       child: BaseScaffold(
@@ -418,7 +477,7 @@ class _TaskPageState extends State<TaskPage> {
                           Expanded(
                             child: Text(
                               _showSuccess
-                                  ? '✅ Правильно!'
+                                  ? '✅ Правильно! +${currentTask.points} очков'
                                   : '❌ Неправильно! Правильный ответ: ${currentTask.correctAnswer}',
                               style: TextStyle(
                                 color: _showSuccess ? Colors.green : Colors.red,

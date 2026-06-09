@@ -15,21 +15,22 @@ class MainMenuPage extends StatefulWidget {
 }
 
 class _MainMenuPageState extends State<MainMenuPage> {
+  // ✅ Исправленный список модулей — соответствует JSON (9 модулей)
   final List<Map<String, dynamic>> modules = [
     {'id': 1, 'title': 'Фонетика мансийского языка'},
-    {'id': 2, 'title': 'Грамматика (число и местоимения)'},
-    {'id': 3, 'title': 'Лексика (термины родства)'},
-    {'id': 4, 'title': 'Предложения с именным сказуемым'},
-    {'id': 5, 'title': 'Разговорная тема "Знакомство"'},
-    {'id': 6, 'title': 'Суффиксы прилагательных'},
-    {'id': 7, 'title': 'Уменьшительные суффиксы'},
-    {'id': 8, 'title': 'Притяжательное склонение'},
-    {'id': 9, 'title': 'Местный падеж'},
-    {'id': 10, 'title': 'Предложения наличия и местонахождения'},
+    {'id': 2, 'title': 'Личные местоимения'},
+    {'id': 3, 'title': 'Грамматика (число и падежи существительных)'},
+    {'id': 4, 'title': 'Глагол (настоящее время)'},
+    {'id': 5, 'title': 'Глагол (прошедшее и будущее время)'},
+    {'id': 6, 'title': 'Качественные имена прилагательные'},
+    {'id': 7, 'title': 'Относительные прилагательные и притяжательность'},
+    {'id': 8, 'title': 'Имена числительные'},
+    {'id': 9, 'title': 'Основы синтаксиса'},
   ];
 
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   int _completedLevelsCount = 0;
+  int _totalScore = 0;
   bool _isLoading = true;
 
   @override
@@ -41,17 +42,17 @@ class _MainMenuPageState extends State<MainMenuPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final completedLevels = await AppDatabase.instance.getCompletedLevelsCount(1);
+    final totalScore = await AppDatabase.instance.getUserTotalScore(1);
     setState(() {
       _completedLevelsCount = completedLevels;
+      _totalScore = totalScore;
       _isLoading = false;
     });
-    debugPrint('💰 Пройдено уровней: $_completedLevelsCount, Очков: ${_completedLevelsCount * 10}');
+    debugPrint('💰 Пройдено уровней: $_completedLevelsCount, Очков: $_totalScore');
   }
 
   @override
   Widget build(BuildContext context) {
-    final totalScore = _completedLevelsCount * 10;
-
     return BaseScaffold(
       scaffoldKey: scaffoldKey,
       appBar: AppBar(
@@ -85,6 +86,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Блок с очками
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -120,7 +122,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '$totalScore',
+                          '$_totalScore',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -168,11 +170,9 @@ class _MainMenuPageState extends State<MainMenuPage> {
         if (allLevels.isEmpty) {
           return ListTile(
             title: Text(module['title']),
-            subtitle: const Text('В процессе'),
+            subtitle: const Text('В процессе разработки'),
             trailing: const Icon(Icons.arrow_forward),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => ModuleLevelsPage(moduleId: module['id'], moduleTitle: module['title'])));
-            },
+            enabled: false,
           );
         }
 
@@ -180,22 +180,39 @@ class _MainMenuPageState extends State<MainMenuPage> {
           future: AppDatabase.instance.getUserProgress(1),
           builder: (context, progressSnapshot) {
             final progress = progressSnapshot.data ?? [];
-            final completedLevelIds = <int>{};
+            final completedTaskIds = progress
+                .where((p) => p.sourceContext == 'task' && p.isCompleted && p.taskId != null)
+                .map((p) => p.taskId!)
+                .toSet();
 
-            for (var p in progress) {
-              if (p.sourceContext == 'task' && p.isCompleted && p.taskId != null) {
-                if (allLevels.any((l) => l.id == p.taskId)) {
-                  completedLevelIds.add(p.taskId!);
-                }
-              }
+            // Считаем процент выполнения модуля
+            int totalTasks = 0;
+            int completedTasks = 0;
+            for (var level in allLevels) {
+              final tasksInLevel = level.id != null ? (AppDatabase.instance.getTasks(level.id!).then((t) => t.length)) : Future.value(0);
+              // Упрощённо: для отображения статуса используем количество пройденных уровней
             }
 
             final allLevelIds = allLevels.map((l) => l.id!).toSet();
-            final isCompleted = allLevelIds.difference(completedLevelIds).isEmpty;
+            final completedLevelIds = progress
+                .where((p) => p.sourceContext == 'level' && p.isCompleted && p.taskId != null && allLevelIds.contains(p.taskId))
+                .map((p) => p.taskId!)
+                .toSet();
+
+            final isModuleCompleted = allLevelIds.difference(completedLevelIds).isEmpty;
+            final completedCount = completedLevelIds.length;
+            final percent = allLevels.isEmpty ? 0 : (completedCount / allLevels.length * 100).round();
 
             return ListTile(
               title: Text(module['title']),
-              subtitle: Text(isCompleted ? '✅ Пройден' : '📚 В процессе'),
+              subtitle: Text(
+                isModuleCompleted
+                    ? '✅ Модуль пройден'
+                    : '📚 Пройдено $percent% ($completedCount/${allLevels.length} уровней)',
+                style: TextStyle(
+                  color: isModuleCompleted ? Colors.green : const Color(0xFF0A4B47),
+                ),
+              ),
               trailing: const Icon(Icons.arrow_forward),
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => ModuleLevelsPage(moduleId: module['id'], moduleTitle: module['title'])));

@@ -9,6 +9,7 @@ import '../services/app_database.dart';
 import '../services/translation_service.dart';
 import '../services/tts_api_service.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/mansi_keyboard.dart';
 
 // ============================================================
 // VoiceCacheService - кеширование аудио
@@ -78,13 +79,12 @@ class PhrasebookPage extends StatefulWidget {
 }
 
 class _PhrasebookPageState extends State<PhrasebookPage> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TranslationService _translationService = TranslationService();
   final VoiceCacheService _voiceCache = VoiceCacheService();
 
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _allPhrases = [];
-  List<Map<String, dynamic>> _currentPhrases = []; // Текущие отображаемые фразы
+  List<Map<String, dynamic>> _currentPhrases = [];
 
   Map<int, Set<int>> _favoritePhrases = {};
 
@@ -106,12 +106,24 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
   bool _isTranslating = false;
   Set<String> _preloadedPhrases = {};
 
+  // ✅ Для мансийской клавиатуры (как в переводчике)
+  final FocusNode _mansiFocusNode = FocusNode();
+  bool _isMansiKeyboardVisible = false;
+
   @override
   void initState() {
     super.initState();
     _loadData();
     _voiceCache.init();
     TtsAudioPlayer.init();
+
+    _mansiFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isMansiKeyboardVisible = _mansiFocusNode.hasFocus;
+        });
+      }
+    });
   }
 
   @override
@@ -120,6 +132,7 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
     _newRussianPhraseController.dispose();
     _newMansiPhraseController.dispose();
     _searchController.dispose();
+    _mansiFocusNode.dispose();
     super.dispose();
   }
 
@@ -171,7 +184,6 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
   Future<void> _loadPhrasesForCategory(int categoryId) async {
     final phrases = await AppDatabase.instance.getPhrasesByCategory(categoryId);
 
-    // Добавляем название категории к каждой фразе
     String categoryName = '';
     for (var c in _categories) {
       if (c['id'] == categoryId) {
@@ -611,124 +623,222 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
 
     final availableCategories = _categories.where((c) => c['name'] != 'Без категории').toList();
 
-    showDialog(
+    // ✅ Показываем кастомный диалог через showGeneralDialog
+    showGeneralDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: const Text('Добавить фразу'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _newRussianPhraseController,
-                    decoration: InputDecoration(
-                      labelText: 'Фраза на русском',
-                      labelStyle: const TextStyle(color: Color(0xFF0A4B47)),
-                      border: const OutlineInputBorder(),
-                      focusedBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.translate, color: Color(0xFF0A4B47)),
-                        onPressed: _isTranslating ? null : _translateToMansi,
-                        tooltip: 'Перевести на мансийский',
-                      ),
-                    ),
-                    maxLines: 2,
+      barrierDismissible: true,
+      barrierLabel: "Закрыть",
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return Material(
+              color: Colors.transparent,
+              child: Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  constraints: const BoxConstraints(maxHeight: 500),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _newMansiPhraseController,
-                    decoration: InputDecoration(
-                      labelText: 'Фраза на мансийском',
-                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0A4B47)),
-                      border: const OutlineInputBorder(),
-                      focusedBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.translate, color: Color(0xFF0A4B47)),
-                        onPressed: _isTranslating ? null : _translateToRussian,
-                        tooltip: 'Перевести на русский',
-                      ),
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    constraints: const BoxConstraints(maxWidth: 300),
-                    child: DropdownButtonFormField<int>(
-                      value: _selectedCategoryForPhrase,
-                      decoration: InputDecoration(
-                        labelText: 'Категория',
-                        labelStyle: const TextStyle(color: Color(0xFF0A4B47)),
-                        border: const OutlineInputBorder(),
-                        focusedBorder: const OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Заголовок
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0A4B47),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
                         ),
-                        enabledBorder: const OutlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF0A4B47)),
-                        ),
-                      ),
-                      hint: const Text('Выберите категорию'),
-                      isExpanded: true,
-                      items: [
-                        const DropdownMenuItem<int>(
-                          value: null,
-                          child: Text('Без категории'),
-                        ),
-                        ...availableCategories.map((category) {
-                          return DropdownMenuItem<int>(
-                            value: category['id'],
-                            child: Text(
-                              category['name'],
-                              overflow: TextOverflow.ellipsis,
+                        child: const Row(
+                          children: [
+                            Icon(Icons.add, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              'Добавить фразу',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                          );
-                        }),
-                      ],
-                      onChanged: (value) {
-                        setStateDialog(() {
-                          _selectedCategoryForPhrase = value;
-                        });
-                      },
-                    ),
+                          ],
+                        ),
+                      ),
+                      // Контент
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                controller: _newRussianPhraseController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Фраза на русском',
+                                  labelStyle: TextStyle(color: Color(0xFF0A4B47)),
+                                  border: OutlineInputBorder(),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
+                                  ),
+                                ),
+                                maxLines: 2,
+                              ),
+                              const SizedBox(height: 12),
+
+                              TextField(
+                                controller: _newMansiPhraseController,
+                                focusNode: _mansiFocusNode,
+                                decoration: const InputDecoration(
+                                  labelText: 'Фраза на мансийском',
+                                  labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0A4B47)),
+                                  border: OutlineInputBorder(),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
+                                  ),
+                                ),
+                                maxLines: 2,
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _isTranslating ? null : _translateToMansi,
+                                      icon: const Icon(Icons.translate, size: 18),
+                                      label: const Text('Рус → Манс'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF0A4B47),
+                                        side: const BorderSide(color: Color(0xFF0A4B47)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _isTranslating ? null : _translateToRussian,
+                                      icon: const Icon(Icons.translate, size: 18),
+                                      label: const Text('Манс → Рус'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF0A4B47),
+                                        side: const BorderSide(color: Color(0xFF0A4B47)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              if (_isTranslating)
+                                const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: LinearProgressIndicator(),
+                                ),
+
+                              const SizedBox(height: 12),
+
+                              Container(
+                                constraints: const BoxConstraints(maxWidth: 300),
+                                child: DropdownButtonFormField<int>(
+                                  value: _selectedCategoryForPhrase,
+                                  decoration: InputDecoration(
+                                    labelText: 'Категория',
+                                    labelStyle: const TextStyle(color: Color(0xFF0A4B47)),
+                                    border: const OutlineInputBorder(),
+                                    focusedBorder: const OutlineInputBorder(
+                                      borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
+                                    ),
+                                    enabledBorder: const OutlineInputBorder(
+                                      borderSide: BorderSide(color: Color(0xFF0A4B47)),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  hint: const Text('Выберите категорию'),
+                                  isExpanded: true,
+                                  isDense: true,
+                                  menuMaxHeight: 200,
+                                  items: [
+                                    const DropdownMenuItem<int>(
+                                      value: null,
+                                      child: Text('Без категории'),
+                                    ),
+                                    ...availableCategories.map((category) {
+                                      return DropdownMenuItem<int>(
+                                        value: category['id'],
+                                        child: Text(
+                                          category['name'],
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedCategoryForPhrase = value;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Кнопки действий
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(16),
+                            bottomRight: Radius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFF0A4B47),
+                                ),
+                                child: const Text('Отмена'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  if (_selectedCategoryForPhrase != null) {
+                                    await _addPhraseToCategory(_selectedCategoryForPhrase!);
+                                  } else {
+                                    await _addPhraseWithoutCategory();
+                                  }
+                                  if (mounted) Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0A4B47),
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Добавить'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  if (_isTranslating)
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: LinearProgressIndicator(),
-                    ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(foregroundColor: const Color(0xFF0A4B47)),
-                child: const Text('Отмена'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_selectedCategoryForPhrase != null) {
-                    await _addPhraseToCategory(_selectedCategoryForPhrase!);
-                  } else {
-                    await _addPhraseWithoutCategory();
-                  }
-                  if (mounted) Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0A4B47),
-                  foregroundColor: Colors.white,
                 ),
-                child: const Text('Добавить'),
               ),
-            ],
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -773,13 +883,11 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
 
   void _handleCategoryTap(int categoryId) async {
     if (_selectedCategoryId == categoryId && !_showAllPhrases) {
-      // Показываем все фразы
       setState(() {
         _showAllPhrases = true;
       });
       await _loadAllPhrasesForDisplay();
     } else {
-      // Показываем фразы выбранной категории
       setState(() {
         _selectedCategoryId = categoryId;
         _showAllPhrases = false;
@@ -806,7 +914,6 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
     final currentCategoryName = _getCurrentCategoryName();
 
     return BaseScaffold(
-      key: _scaffoldKey,
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -818,27 +925,28 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
           children: [
             const Text(
               "Разговорник",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.normal),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.white),
             ),
             if (currentCategoryName.isNotEmpty)
               Text(
                 currentCategoryName,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: Colors.white70),
               ),
           ],
         ),
         backgroundColor: const Color(0xFF0A4B47),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.phrasebook),
+      body: Column(
         children: [
           if (_isPreloading)
             const LinearProgressIndicator(
@@ -869,7 +977,6 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
                         icon: const Icon(Icons.clear, color: Color(0xFF0A4B47)),
@@ -909,9 +1016,7 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
                         _showOnlyFavorites = !_showOnlyFavorites;
                       });
                     },
-                    tooltip: _showOnlyFavorites
-                        ? 'Показать всё'
-                        : 'Показать только избранное',
+                    tooltip: _showOnlyFavorites ? 'Показать всё' : 'Показать только избранное',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -992,7 +1097,9 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
           const Divider(height: 1, color: Colors.grey),
 
           Expanded(
-            child: filteredPhrases.isEmpty
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredPhrases.isEmpty
                 ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1120,7 +1227,6 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
           ),
         ],
       ),
-      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.phrasebook),
     );
   }
 }

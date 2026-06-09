@@ -194,9 +194,17 @@ class AppDatabase {
 
   Future<void> initLearningMaterials() async {
     final db = await database;
+
+    // Импорт модулей обучения
     var moduleCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM modules'));
     if (moduleCount == 0) {
       await importModulesFromJson();
+    }
+
+    // Импорт разговорника (только если нет категорий)
+    var categoryCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM phrase_categories'));
+    if (categoryCount == 0) {
+      await importPhrasebookFromJson();
     }
   }
 
@@ -266,7 +274,17 @@ class AppDatabase {
     var result = await db.rawQuery('''
     SELECT SUM(score) as total 
     FROM user_progress 
-    WHERE user_id = ? AND (source_context = 'task' OR source_context = 'riddle')
+    WHERE user_id = ? AND source_context = 'task' AND is_completed = 1
+  ''', [userId]);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> getCompletedLevelsCount(int userId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+    SELECT COUNT(DISTINCT task_id) as count 
+    FROM user_progress 
+    WHERE user_id = ? AND source_context = 'level' AND is_completed = 1
   ''', [userId]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
@@ -290,6 +308,65 @@ class AppDatabase {
       }, where: 'id = ?', whereArgs: [existing.id]);
     }
     return await db.rawInsert('INSERT INTO user_progress (user_id, riddle_id, source_context, is_completed, attempts_count, score, last_attempt) VALUES (?, ?, ?, ?, ?, ?, ?)', [userId, riddleId, 'riddle', isCompleted ? 1 : 0, 1, score, DateTime.now().toIso8601String()]);
+  }
+
+  Future<void> importPhrasebookFromJson() async {
+    try {
+      final String jsonString = await rootBundle.loadString('assets/phrasebook_data.json');
+      final Map<String, dynamic> data = json.decode(jsonString);
+
+      final db = await database;
+
+      await db.transaction((txn) async {
+        // Очищаем существующие данные (но не удаляем пользовательские?
+        // Лучше очищать только если таблицы пустые)
+
+        for (var categoryData in data['categories']) {
+          // Проверяем, существует ли уже категория с таким именем
+          final existing = await txn.query(
+            'phrase_categories',
+            where: 'name = ?',
+            whereArgs: [categoryData['name']],
+          );
+
+          int categoryId;
+          if (existing.isEmpty) {
+            // Вставляем новую категорию
+            categoryId = await txn.insert('phrase_categories', {
+              'name': categoryData['name'],
+              'icon_resource': categoryData['icon'],
+            });
+          } else {
+            categoryId = existing.first['id'] as int;
+          }
+
+          // Вставляем фразы
+          for (var phraseData in categoryData['phrases']) {
+            // Проверяем, существует ли уже такая фраза
+            final existingPhrase = await txn.query(
+              'phrases',
+              where: 'text_mansi = ? AND category_id = ?',
+              whereArgs: [phraseData['mansi'], categoryId],
+            );
+
+            if (existingPhrase.isEmpty) {
+              await txn.insert('phrases', {
+                'category_id': categoryId,
+                'text_mansi': phraseData['mansi'],
+                'text_russian': phraseData['russian'],
+                'transcription': phraseData['transcription'],
+                'media_id': null,
+              });
+            }
+          }
+        }
+      });
+
+      debugPrint('✅ Разговорник успешно импортирован из JSON');
+    } catch (e, stack) {
+      debugPrint('❌ Ошибка импорта разговорника: $e');
+      debugPrint(stack.toString());
+    }
   }
 
   Future<List<Map<String, dynamic>>> getAllPhraseCategories() async {
@@ -345,16 +422,6 @@ class AppDatabase {
     if (searchQuery != null && searchQuery.isNotEmpty) { whereParts.add('(source_text LIKE ? OR target_text LIKE ?)'); whereArgs.addAll(['%$searchQuery%', '%$searchQuery%']); }
     final whereClause = whereParts.isNotEmpty ? whereParts.join(' AND ') : null;
     return await db.query('translations', where: whereClause, whereArgs: whereArgs.isNotEmpty ? whereArgs : null, orderBy: 'created_at DESC', limit: 500);
-  }
-
-  Future<int> getCompletedLevelsCount(int userId) async {
-    final db = await database;
-    final result = await db.rawQuery('''
-    SELECT COUNT(DISTINCT task_id) as count 
-    FROM user_progress 
-    WHERE user_id = ? AND source_context = 'task' AND is_completed = 1
-  ''', [userId]);
-    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<void> clearTranslationHistory() async {

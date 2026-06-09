@@ -50,8 +50,8 @@ dev_dependencies:
 
 flutter:
   assets:
+    - assets/phrasebook_data.json
     - assets/learning_modules.json
-    - assets/learning_content.json
     - assets/images/logo.png
     - assets/riddles.json
     - assets/audio/
