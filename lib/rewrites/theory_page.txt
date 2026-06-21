@@ -5,7 +5,7 @@ import '../services/app_database.dart';
 import '../services/voice_cash_service.dart';
 import '../services/tts_api_service.dart';
 import '../widgets/app_drawer.dart';
-import 'task_page.dart';
+import 'task_page.txt';
 
 class TheoryPage extends StatefulWidget {
   final int moduleId;
@@ -127,32 +127,11 @@ class _TheoryPageState extends State<TheoryPage> {
   /// Очищает HTML-теги и возвращает чистый текст
   String _cleanHtmlTags(String html) {
     String result = html;
-
-    // Сначала заменяем блочные теги на переносы строк
-    result = result.replaceAll(RegExp(r'<p[^>]*>'), '\n');
-    result = result.replaceAll(RegExp(r'</p>'), '\n');
-    result = result.replaceAll(RegExp(r'<br[^>]*>'), '\n');
-    result = result.replaceAll(RegExp(r'<li[^>]*>'), '\n• ');
-    result = result.replaceAll(RegExp(r'</li>'), '');
-    result = result.replaceAll(RegExp(r'</ul>'), '\n');
-    result = result.replaceAll(RegExp(r'</ol>'), '\n');
-    result = result.replaceAll(RegExp(r'<h2[^>]*>'), '\n\n');
-    result = result.replaceAll(RegExp(r'</h2>'), '\n\n');
-    result = result.replaceAll(RegExp(r'<h3[^>]*>'), '\n\n');
-    result = result.replaceAll(RegExp(r'</h3>'), '\n\n');
-
-    // Удаляем остальные теги (strong, em, tts и т.д.)
+    // Удаляем все HTML-теги
     result = result.replaceAll(RegExp(r'<[^>]+>'), '');
-
-    // Заменяем множественные переносы на двойные (для абзацев)
-    result = result.replaceAll(RegExp(r'\n\s*\n'), '\n\n');
-
-    // Удаляем лишние пробелы в начале и конце строк
-    final lines = result.split('\n');
-    final cleanedLines = lines.map((line) => line.trim()).toList();
-    result = cleanedLines.join('\n');
-
-    return result.trim();
+    // Заменяем множественные пробелы и переносы на один пробел
+    result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return result;
   }
 
   /// Создаёт виджеты текста с базовым форматированием (заголовки, списки)

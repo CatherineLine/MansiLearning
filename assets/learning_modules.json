@@ -17,21 +17,21 @@
               "type": "single",
               "correct_answer": "6",
               "options_json": "[\"4\", \"5\", \"6\", \"7\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Какой из этих звуков является кратким гласным?",
               "type": "single",
               "correct_answer": "а",
               "options_json": "[\"а̄\", \"э̄\", \"а\", \"ӯ\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Прослушайте звук и определите, какой это гласный:",
               "type": "audio_recognition",
               "correct_answer": "у",
               "options_json": "[\"а\", \"и\", \"у\", \"о\"]",
-              "points": 15,
+              "points": 20,
               "audio_text": "у"
             }
           ]
@@ -47,14 +47,14 @@
               "type": "single",
               "correct_answer": "6",
               "options_json": "[\"4\", \"5\", \"6\", \"7\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Прослушайте слово и определите, какой это гласный:",
               "type": "audio_recognition",
               "correct_answer": "а̄",
               "options_json": "[\"а\", \"а̄\", \"о\", \"о̄\"]",
-              "points": 15,
+              "points": 20,
               "audio_text": "а̄"
             },
             {
@@ -62,7 +62,7 @@
               "type": "audio_recognition",
               "correct_answer": "ӯ",
               "options_json": "[\"у\", \"ӯ\", \"о\", \"о̄\"]",
-              "points": 15,
+              "points": 20,
               "audio_text": "ӯ"
             }
           ]
@@ -78,21 +78,21 @@
               "type": "single",
               "correct_answer": "17",
               "options_json": "[\"15\", \"16\", \"17\", \"18\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Есть ли в мансийском языке противопоставление согласных по звонкости-глухости?",
               "type": "true_false",
               "correct_answer": "false",
               "options_json": "[]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Прослушайте звук. Это заднеязычный носовой согласный:",
               "type": "audio_recognition",
               "correct_answer": "ӈ",
               "options_json": "[\"н\", \"ӈ\", \"м\", \"ҥ\"]",
-              "points": 15,
+              "points": 20,
               "audio_text": "ӈ"
             }
           ]
@@ -108,21 +108,21 @@
               "type": "single",
               "correct_answer": "4",
               "options_json": "[\"2\", \"3\", \"4\", \"5\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Какой звук является мягкой парой для 'н'?",
               "type": "single",
               "correct_answer": "нʼ",
               "options_json": "[\"н\", \"ӈ\", \"нʼ\", \"нь\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Прослушайте слово. Какой мягкий согласный в нём слышится?",
               "type": "audio_recognition",
               "correct_answer": "нʼ",
               "options_json": "[\"н\", \"нʼ\", \"л\", \"лʼ\"]",
-              "points": 15,
+              "points": 20,
               "audio_text": "нянь"
             }
           ]
@@ -138,21 +138,21 @@
               "type": "single",
               "correct_answer": "На первый",
               "options_json": "[\"На первый\", \"На последний\", \"На второй\", \"На любой\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "В слове 'мань' (маленький) ударение падает на...",
               "type": "single",
               "correct_answer": "Первый слог",
               "options_json": "[\"Первый слог\", \"Последний слог\", \"На корень\", \"Нет ударения\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Ударение в мансийском языке фиксированное?",
               "type": "true_false",
               "correct_answer": "true",
               "options_json": "[]",
-              "points": 15
+              "points": 20
             }
           ]
         }
@@ -175,21 +175,21 @@
               "type": "single",
               "correct_answer": "я",
               "options_json": "[\"я\", \"ты\", \"он\", \"мы\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Какое местоимение переводится как 'ты'?",
               "type": "single",
               "correct_answer": "наӈ",
               "options_json": "[\"ам\", \"наӈ\", \"тав\", \"ман\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Выберите правильный перевод: 'Он учит мансийский язык'",
               "type": "single",
               "correct_answer": "Тав маньси лайтын ханисьтахты",
               "options_json": "[\"Ам маньси лайтын ханисьтэгум\", \"Наӈ маньси лайтын ханисьтахтын\", \"Тав маньси лайтын ханисьтахты\", \"Ман маньси лайтын ханисьтэв\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -204,21 +204,21 @@
               "type": "single",
               "correct_answer": "мы (двое)",
               "options_json": "[\"я\", \"мы (двое)\", \"вы (двое)\", \"они (двое)\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Какое местоимение указывает на двух человек, к которым обращаются?",
               "type": "single",
               "correct_answer": "нэн",
               "options_json": "[\"мён\", \"нэн\", \"тэн\", \"ман\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Сколько человек обозначает местоимение 'тэн'?",
               "type": "single",
               "correct_answer": "двое",
               "options_json": "[\"один\", \"двое\", \"много\", \"никто\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -233,21 +233,21 @@
               "type": "single",
               "correct_answer": "мы",
               "options_json": "[\"я\", \"ты\", \"мы\", \"они\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Какое местоимение может означать и 'ты', и 'вы'?",
               "type": "single",
               "correct_answer": "наӈ",
               "options_json": "[\"ам\", \"наӈ\", \"тав\", \"тан\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Выберите правильный перевод: 'Они (многие) говорят по-мансийски'",
               "type": "single",
               "correct_answer": "Тан маньси лайтыл потыртэгыт",
               "options_json": "[\"Тэн маньси лайтыл потыртэг\", \"Тав маньси лайтыл потырты\", \"Тан маньси лайтыл потыртэгыт\", \"Ман маньси лайтыл потыртэв\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -262,21 +262,21 @@
               "type": "single",
               "correct_answer": "меня",
               "options_json": "[\"я\", \"меня\", \"мне\", \"мной\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Выберите правильную форму винительного падежа для 'ты'",
               "type": "single",
               "correct_answer": "наӈын",
               "options_json": "[\"наӈ\", \"наӈын\", \"наӈынн\", \"нэнан\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как сказать 'его' (винительный падеж) на мансийском?",
               "type": "single",
               "correct_answer": "таве",
               "options_json": "[\"тав\", \"таве\", \"тавён\", \"таветыл\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -291,21 +291,21 @@
               "type": "single",
               "correct_answer": "анумн",
               "options_json": "[\"анум\", \"анумн\", \"анумныл\", \"анумтыл\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Выберите правильный перевод: 'от тебя'",
               "type": "single",
               "correct_answer": "наӈынныл",
               "options_json": "[\"наӈын\", \"наӈынн\", \"наӈынныл\", \"наӈынтыл\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится местоимение 'тавёныл'?",
               "type": "single",
               "correct_answer": "от него",
               "options_json": "[\"ему\", \"от него\", \"его\", \"им\"]",
-              "points": 15
+              "points": 20
             }
           ]
         }
@@ -328,21 +328,21 @@
               "type": "single",
               "correct_answer": "-г",
               "options_json": "[\"-г\", \"-ыг\", \"-иг\", \"-т\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Образуйте двойственное число от слова 'хап' (лодка)",
               "type": "single",
               "correct_answer": "хапыг",
               "options_json": "[\"хап\", \"хапыг\", \"хапиг\", \"хапт\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Сколько предметов обозначает существительное в двойственном числе?",
               "type": "single",
               "correct_answer": "два",
               "options_json": "[\"один\", \"два\", \"много\", \"ни одного\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -357,21 +357,21 @@
               "type": "single",
               "correct_answer": "-ыт",
               "options_json": "[\"-т\", \"-ыт\", \"-ит\", \"-г\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Образуйте множественное число от слова 'нэ' (женщина)",
               "type": "single",
               "correct_answer": "нэт",
               "options_json": "[\"нэ\", \"нэг\", \"нэт\", \"нэит\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Сколько предметов обозначает существительное во множественном числе?",
               "type": "single",
               "correct_answer": "более двух",
               "options_json": "[\"один\", \"два\", \"более двух\", \"один или два\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -386,21 +386,21 @@
               "type": "single",
               "correct_answer": "прямого дополнения",
               "options_json": "[\"подлежащего\", \"прямого дополнения\", \"определения\", \"обстоятельства\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "На какой вопрос отвечает существительное в основном падеже в роли определения?",
               "type": "single",
               "correct_answer": "манарын? (какой?)",
               "options_json": "[\"хотъют? (кто?)\", \"манарын? (какой?)\", \"хоталь? (куда?)\", \"хумус? (как?)\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "В предложении 'Хум рупиты' слово 'хум' стоит в основном падеже в роли...",
               "type": "single",
               "correct_answer": "подлежащего",
               "options_json": "[\"подлежащего\", \"дополнения\", \"определения\", \"сказуемого\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -415,21 +415,21 @@
               "type": "single",
               "correct_answer": "-т, -ыт",
               "options_json": "[\"-н, -ын\", \"-т, -ыт\", \"-ныл\", \"-л, -ыл\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится слово 'ворт'?",
               "type": "single",
               "correct_answer": "в лесу",
               "options_json": "[\"лес\", \"в лесу\", \"из леса\", \"лесом\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Образуйте направительный падеж от слова 'кол' (дом)",
               "type": "single",
               "correct_answer": "колн",
               "options_json": "[\"кол\", \"колн\", \"колт\", \"колныл\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -444,21 +444,21 @@
               "type": "single",
               "correct_answer": "-ныл",
               "options_json": "[\"-н\", \"-т\", \"-ныл\", \"-л\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'сагрыл'?",
               "type": "single",
               "correct_answer": "топором",
               "options_json": "[\"топор\", \"топором\", \"о топоре\", \"из топора\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Образуйте творительный падеж от слова 'нянь' (хлеб)",
               "type": "single",
               "correct_answer": "нянил",
               "options_json": "[\"нянь\", \"нянил\", \"нянныл\", \"нянт\"]",
-              "points": 15
+              "points": 20
             }
           ]
         }
@@ -481,21 +481,21 @@
               "type": "single",
               "correct_answer": "-ум",
               "options_json": "[\"-н\", \"-ум\", \"-ыт\", \"-г\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'ам хансэгум'?",
               "type": "single",
               "correct_answer": "я пишу",
               "options_json": "[\"я пишу\", \"ты пишешь\", \"он пишет\", \"мы пишем\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Выберите правильную форму глагола 'тэ-ӈкве' (есть) для 1-го лица ед.ч.",
               "type": "single",
               "correct_answer": "тэгум",
               "options_json": "[\"тэгын\", \"тэг\", \"тэгум\", \"тэгмён\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -510,21 +510,21 @@
               "type": "single",
               "correct_answer": "-н (-ын)",
               "options_json": "[\"-ум\", \"-н (-ын)\", \"нулевое\", \"-ыт\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'тав хансы'?",
               "type": "single",
               "correct_answer": "он пишет",
               "options_json": "[\"я пишу\", \"ты пишешь\", \"он пишет\", \"мы пишем\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Выберите правильную форму глагола для 'ты ешь'",
               "type": "single",
               "correct_answer": "тэгын",
               "options_json": "[\"тэгум\", \"тэгын\", \"тэг\", \"тэгыт\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -539,21 +539,21 @@
               "type": "single",
               "correct_answer": "-мён",
               "options_json": "[\"-ум\", \"-мён\", \"-ув\", \"-г\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Сколько человек совершают действие, если глагол стоит в двойственном числе?",
               "type": "single",
               "correct_answer": "двое",
               "options_json": "[\"один\", \"двое\", \"много\", \"неизвестно\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'тэн хансыг'?",
               "type": "single",
               "correct_answer": "они (двое) пишут",
               "options_json": "[\"я пишу\", \"ты пишешь\", \"он пишет\", \"они (двое) пишут\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -568,21 +568,21 @@
               "type": "single",
               "correct_answer": "-ув (-в)",
               "options_json": "[\"-ум\", \"-мён\", \"-ув (-в)\", \"-ыт\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'тан хансэгыт'?",
               "type": "single",
               "correct_answer": "они (многие) пишут",
               "options_json": "[\"я пишу\", \"мы (двое) пишем\", \"вы пишете\", \"они (многие) пишут\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Какая форма глагола совпадает в единственном и множественном числе?",
               "type": "single",
               "correct_answer": "2-е лицо",
               "options_json": "[\"1-е лицо\", \"2-е лицо\", \"3-е лицо\", \"все лица\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -597,21 +597,21 @@
               "type": "single",
               "correct_answer": "ловиньтэгум (читаю)",
               "options_json": "[\"хайты (бежит)\", \"унлы (сидит)\", \"ловиньтэгум (читаю)\", \"ёхты (приходит)\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "В каком предложении глагол является непереходным?",
               "type": "single",
               "correct_answer": "Няврам хайты",
               "options_json": "[\"Ам нэпак ловиньтэгум\", \"Тав хап варсы\", \"Няврам хайты\", \"Ам сяй аюм\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Что обозначают непереходные глаголы?",
               "type": "single",
               "correct_answer": "действие, не переходящее на объект",
               "options_json": "[\"действие, направленное на объект\", \"действие, не переходящее на объект\", \"действие в прошлом\", \"действие в будущем\"]",
-              "points": 15
+              "points": 20
             }
           ]
         }
@@ -634,21 +634,21 @@
               "type": "single",
               "correct_answer": "-с",
               "options_json": "[\"-с\", \"-ыс\", \"-ас\", \"-м\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'ёхтыс'?",
               "type": "single",
               "correct_answer": "он пришёл",
               "options_json": "[\"он идёт\", \"он пришёл\", \"он придёт\", \"он ушёл\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Образуйте прошедшее время от глагола 'тэ-ӈкве' (есть, кушать)",
               "type": "single",
               "correct_answer": "тэс",
               "options_json": "[\"тэг\", \"тэс\", \"тэгын\", \"тэгум\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -663,21 +663,21 @@
               "type": "single",
               "correct_answer": "тах",
               "options_json": "[\"кос\", \"тах\", \"вос\", \"уль\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Что обозначает будущее время с частицей 'тах'?",
               "type": "single",
               "correct_answer": "законченное действие",
               "options_json": "[\"незаконченное действие\", \"законченное действие\", \"действие в прошлом\", \"действие в настоящем\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'ам хансэлум тах'?",
               "type": "single",
               "correct_answer": "я напишу",
               "options_json": "[\"я пишу\", \"я писал\", \"я напишу\", \"я буду писать\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -692,21 +692,21 @@
               "type": "single",
               "correct_answer": "патуӈкве",
               "options_json": "[\"ёлуӈкве\", \"минуӈкве\", \"патуӈкве\", \"хайтуӈкве\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Что обозначает будущее время, образованное с помощью 'патуӈкве'?",
               "type": "single",
               "correct_answer": "незаконченное действие",
               "options_json": "[\"законченное действие\", \"незаконченное действие\", \"действие в прошлом\", \"мгновенное действие\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'ман ёнгункве патэв'?",
               "type": "single",
               "correct_answer": "мы будем играть",
               "options_json": "[\"я буду играть\", \"ты будешь играть\", \"мы будем играть\", \"они будут играть\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -721,21 +721,21 @@
               "type": "single",
               "correct_answer": "-н",
               "options_json": "[\"-ум\", \"-н\", \"-тыл\", \"-г\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как сказать 'пусть идёт' на мансийском?",
               "type": "single",
               "correct_answer": "вос мины",
               "options_json": "[\"минэн\", \"вос мины\", \"минасум тах\", \"минас\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Что выражает повелительное наклонение?",
               "type": "single",
               "correct_answer": "приказ, просьбу, совет",
               "options_json": "[\"реальный факт\", \"желательное действие\", \"условие\", \"приказ, просьбу, совет\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -750,21 +750,21 @@
               "type": "single",
               "correct_answer": "ат-",
               "options_json": "[\"аюӈкве\", \"ат-\", \"олуӈкве\", \"таёлуӈкве\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'ам ат хансэгум'?",
               "type": "single",
               "correct_answer": "я не пишу",
               "options_json": "[\"я пишу\", \"я не пишу\", \"я писал\", \"я напишу\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как сказать 'его нет' на мансийском?",
               "type": "single",
               "correct_answer": "тав ати",
               "options_json": "[\"там атим\", \"тав ати\", \"тав атын\", \"тан атив\"]",
-              "points": 15
+              "points": 20
             }
           ]
         }
@@ -787,21 +787,21 @@
               "type": "single",
               "correct_answer": "выгыр",
               "options_json": "[\"сэмыл\", \"выгыр\", \"янк\", \"хорамын\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится прилагательное 'ёмас'?",
               "type": "single",
               "correct_answer": "хороший",
               "options_json": "[\"хороший\", \"плохой\", \"большой\", \"маленький\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "В какой роли могут выступать прилагательные в предложении?",
               "type": "multiple",
               "correct_answer": "[\"определения\", \"сказуемого\"]",
               "options_json": "[\"подлежащего\", \"определения\", \"сказуемого\", \"дополнения\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -816,21 +816,21 @@
               "type": "single",
               "correct_answer": "чёрный",
               "options_json": "[\"белый\", \"чёрный\", \"красный\", \"синий\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Что означает слово 'нярппумоспа'?",
               "type": "single",
               "correct_answer": "зелёный",
               "options_json": "[\"красный\", \"синий\", \"зелёный\", \"жёлтый\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как сказать 'белый' на мансийском?",
               "type": "single",
               "correct_answer": "янк",
               "options_json": "[\"янк\", \"сэмыл\", \"выгыр\", \"вошрам\"]",
-              "points": 15
+              "points": 20
             }
           ]
         },
@@ -845,21 +845,21 @@
               "type": "single",
               "correct_answer": "исходный",
               "options_json": "[\"основной\", \"направительный\", \"местный\", \"исходный\"]",
-              "points": 15
+              "points": 20
             },
             {
               "question_text": "Как переводится 'Ам аскомныл карыс'?",
               "type": "single",
               "correct_answer": "Я выше своего отца",
               "options_json": "[\"Я ниже отца\", \"Я выше своего отца\", \"Мой отец выше меня\", \"Мы с отцом одного роста\"]",
-                "points": 15
+                "points": 20
                 },
                 {
                 "question_text": "Какой суффикс имеет слово 'аскомныл'?",
                 "type": "single",
                 "correct_answer": "-ныл",
                 "options_json": "[\"-н\", \"-т\", \"-ныл\", \"-л\"]",
-                "points": 15
+                "points": 20
                 }
               ]
             },
@@ -874,21 +874,21 @@
                   "type": "single",
                   "correct_answer": "-нув(-нуве)",
                   "options_json": "[\"-ныл\", \"-н\", \"-нув(-нуве)\", \"-т\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Что означает суффикс '-нув' в сравнительной степени?",
                   "type": "single",
                   "correct_answer": "незначительное отличие",
                   "options_json": "[\"большое отличие\", \"незначительное отличие\", \"отсутствие отличия\", \"максимальное отличие\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как переводится 'тарвитынуве'?",
                   "type": "single",
                   "correct_answer": "потяжелее",
                   "options_json": "[\"тяжёлый\", \"потяжелее\", \"самый тяжёлый\", \"легче\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -903,21 +903,21 @@
                   "type": "single",
                   "correct_answer": "сяр",
                   "options_json": "[\"сака\", \"сяр\", \"такысь\", \"пуссын\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как переводится 'сяр яныг'?",
                   "type": "single",
                   "correct_answer": "самый большой",
                   "options_json": "[\"очень большой\", \"самый большой\", \"больше\", \"большой\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Что выражает превосходная степень?",
                   "type": "single",
                   "correct_answer": "высшую степень качества",
                   "options_json": "[\"сравнение двух предметов\", \"высшую степень качества\", \"незначительное отличие\", \"отсутствие качества\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             }
@@ -940,21 +940,21 @@
                   "type": "single",
                   "correct_answer": "-ын, -ич",
                   "options_json": "[\"-ныл\", \"-ын, -ич\", \"-т\", \"-л\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как будет 'железный' на мансийском?",
                   "type": "single",
                   "correct_answer": "кёрын",
                   "options_json": "[\"кёр\", \"кёрын\", \"кёрныл\", \"кёрич\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "От какого слова образовано прилагательное 'йивын'?",
                   "type": "single",
                   "correct_answer": "йив (дерево)",
                   "options_json": "[\"вит (вода)\", \"йив (дерево)\", \"кёр (железо)\", \"сули (глина)\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -969,21 +969,21 @@
                   "type": "single",
                   "correct_answer": "городской человек",
                   "options_json": "[\"деревенский человек\", \"городской человек\", \"лесной человек\", \"старый человек\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как будет 'осенний ветер' на мансийском?",
                   "type": "single",
                   "correct_answer": "таквсы вот",
                   "options_json": "[\"туи вот\", \"тэлы вот\", \"таквсы вот\", \"туя вот\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Что означает слово 'туи'?",
                   "type": "single",
                   "correct_answer": "летний",
                   "options_json": "[\"летний\", \"зимний\", \"осенний\", \"весенний\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -998,21 +998,21 @@
                   "type": "single",
                   "correct_answer": "хапум",
                   "options_json": "[\"хап\", \"хапын\", \"хапум\", \"хапэ\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какой суффикс принадлежности соответствует 2-му лицу?",
                   "type": "single",
                   "correct_answer": "-ын",
                   "options_json": "[\"-ум\", \"-ын\", \"-э\", \"-ув\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как переводится 'ащум'?",
                   "type": "single",
                   "correct_answer": "мой отец",
                   "options_json": "[\"мой отец\", \"твой отец\", \"его отец\", \"наш отец\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1027,21 +1027,21 @@
                   "type": "single",
                   "correct_answer": "-аг",
                   "options_json": "[\"-г\", \"-аг\", \"-яг\", \"-т\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как переводится 'апагэ'?",
                   "type": "single",
                   "correct_answer": "его две люльки",
                   "options_json": "[\"его люлька\", \"его две люльки\", \"мои две люльки\", \"твои две люльки\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Сколько предметов обозначает форма 'хапагум'?",
                   "type": "single",
                   "correct_answer": "два",
                   "options_json": "[\"один\", \"два\", \"много\", \"ни одного\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1056,21 +1056,21 @@
                   "type": "single",
                   "correct_answer": "-н",
                   "options_json": "[\"-н\", \"-ан\", \"-ян\", \"-т\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как переводится 'книганум'?",
                   "type": "single",
                   "correct_answer": "мои книги",
                   "options_json": "[\"моя книга\", \"мои книги\", \"твои книги\", \"его книги\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Что означает слово 'коланэ'?",
                   "type": "single",
                   "correct_answer": "его дома",
                   "options_json": "[\"мой дом\", \"твой дом\", \"его дома\", \"наши дома\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             }
@@ -1093,21 +1093,21 @@
                   "type": "single",
                   "correct_answer": "хўрум",
                   "options_json": "[\"нила\", \"хўрум\", \"китыг\", \"хот\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какое числительное означает 'десять'?",
                   "type": "single",
                   "correct_answer": "лов",
                   "options_json": "[\"сат\", \"лов\", \"хот\", \"онтолов\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как будет 'два дома' на мансийском?",
                   "type": "single",
                   "correct_answer": "китыг кол",
                   "options_json": "[\"китыг колыт\", \"китыг кол\", \"китыгыг кол\", \"кол китьг\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1122,21 +1122,21 @@
                   "type": "single",
                   "correct_answer": "атхуйплов",
                   "options_json": "[\"аквхуйплов\", \"китхуйплов\", \"хурмухуйплов\", \"атхуйплов\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какое числительное означает 'двадцать'?",
                   "type": "single",
                   "correct_answer": "хус",
                   "options_json": "[\"хус\", \"лов\", \"хотхуйплов\", \"сатхуйплов\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Сколько будет 'нилахуйплов'?",
                   "type": "single",
                   "correct_answer": "14",
                   "options_json": "[\"11\", \"12\", \"13\", \"14\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1151,21 +1151,21 @@
                   "type": "single",
                   "correct_answer": "атпан",
                   "options_json": "[\"ват\", \"налиман\", \"атпан\", \"хотпан\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Что означает 'ват нупыл аква'?",
                   "type": "single",
                   "correct_answer": "31",
                   "options_json": "[\"21\", \"31\", \"41\", \"51\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как переводится 'китсат'?",
                   "type": "single",
                   "correct_answer": "200",
                   "options_json": "[\"100\", \"200\", \"300\", \"400\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1180,21 +1180,21 @@
                   "type": "single",
                   "correct_answer": "-ит",
                   "options_json": "[\"-г\", \"-т\", \"-ит\", \"-ыл\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как будет 'четвёртый' на мансийском?",
                   "type": "single",
                   "correct_answer": "нильт",
                   "options_json": "[\"нила\", \"нильт\", \"нилаг\", \"нилал\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какое числительное является порядковым?",
                   "type": "single",
                   "correct_answer": "ловит",
                   "options_json": "[\"лов\", \"ловит\", \"ловыл\", \"ловыг\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1209,21 +1209,21 @@
                   "type": "single",
                   "correct_answer": "китгыл",
                   "options_json": "[\"киттыг\", \"китгыл\", \"китынтыг\", \"кит пис\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Что означает слово 'аквал'?",
                   "type": "single",
                   "correct_answer": "по одному",
                   "options_json": "[\"один\", \"по одному\", \"в первый раз\", \"в один раз\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как будет 'в три раза' на мансийском?",
                   "type": "single",
                   "correct_answer": "хўрум пис",
                   "options_json": "[\"хурмыл\", \"хурминтыг\", \"хўрум пис\", \"хурмыг\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             }
@@ -1246,21 +1246,21 @@
                   "type": "single",
                   "correct_answer": "в конце предложения",
                   "options_json": "[\"в начале предложения\", \"в середине\", \"в конце предложения\", \"везде\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Где стоит определение по отношению к определяемому слову?",
                   "type": "single",
                   "correct_answer": "перед определяемым словом",
                   "options_json": "[\"после определяемого слова\", \"перед определяемым словом\", \"в любом месте\", \"в конце предложения\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какой порядок слов характерен для мансийского языка?",
                   "type": "single",
                   "correct_answer": "рамочный (SOV)",
                   "options_json": "[\"свободный\", \"рамочный (SOV)\", \"SV0\", \"VSO\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1275,21 +1275,21 @@
                   "type": "single",
                   "correct_answer": "двойственном",
                   "options_json": "[\"единственном\", \"двойственном\", \"множественном\", \"не определяется\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как согласуется сказуемое с подлежащим?",
                   "type": "single",
                   "correct_answer": "в числе и лице",
                   "options_json": "[\"в роде\", \"в числе и лице\", \"в падеже\", \"не согласуется\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Каким падежом выражено подлежащее?",
                   "type": "single",
                   "correct_answer": "основным",
                   "options_json": "[\"основным\", \"направительным\", \"местным\", \"творительным\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1304,21 +1304,21 @@
                   "type": "single",
                   "correct_answer": "основном",
                   "options_json": "[\"основном\", \"направительном\", \"исходном\", \"творительном\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какой падеж у слова 'ащумныл' в предложении 'Ам ащумныл письмал ёхтувёсум'?",
                   "type": "single",
                   "correct_answer": "исходный",
                   "options_json": "[\"основной\", \"направительный\", \"исходный\", \"творительный\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Что выражает косвенное дополнение в творительном падеже?",
                   "type": "single",
                   "correct_answer": "орудие действия",
                   "options_json": "[\"место действия\", \"время действия\", \"орудие действия\", \"цель действия\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1333,21 +1333,21 @@
                   "type": "single",
                   "correct_answer": "перед сказуемым",
                   "options_json": "[\"в начале предложения\", \"перед сказуемым\", \"после сказуемого\", \"в конце предложения\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как переводится 'хольтан'?",
                   "type": "single",
                   "correct_answer": "завтра",
                   "options_json": "[\"вчера\", \"сегодня\", \"завтра\", \"сейчас\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какое слово является обстоятельством образа действия?",
                   "type": "single",
                   "correct_answer": "пелпысь (быстро)",
                   "options_json": "[\"хольтан (завтра)\", \"магыс (для)\", \"пелпысь (быстро)\", \"тур ватат (на берегу озера)\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             },
@@ -1362,21 +1362,21 @@
                   "type": "single",
                   "correct_answer": "-а",
                   "options_json": "[\"-н\", \"-т\", \"-а\", \"-ыл\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Как спросить 'Что ты делаешь?' на мансийском?",
                   "type": "single",
                   "correct_answer": "Маныр варигын?",
                   "options_json": "[\"Хоттьют варигын?\", \"Маныр варигын?\", \"Хоталь минэгын?\", \"Хумус олэгын?\"]",
-                  "points": 15
+                  "points": 20
                 },
                 {
                   "question_text": "Какой вопрос задаётся к подлежащему?",
                   "type": "single",
                   "correct_answer": "Хоттьют? (кто?)",
                   "options_json": "[\"Хоттьют? (кто?)\", \"Маныр? (что?)\", \"Хоталь? (куда?)\", \"Хумус? (как?)\"]",
-                  "points": 15
+                  "points": 20
                 }
               ]
             }

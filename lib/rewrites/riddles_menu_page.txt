@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../services/app_database.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/base_page.dart';
-import 'riddle_page.dart';
+import 'riddle_page.txt';
 
 class RiddlesMenuPage extends StatefulWidget {
   const RiddlesMenuPage({super.key});
@@ -62,7 +62,6 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
     }
 
     _userTotalScore = await AppDatabase.instance.getUserTotalScore(1);
-    setState(() {});
   }
 
   Future<Map<String, dynamic>> _loadRiddlesFromAssets() async {
@@ -126,18 +125,8 @@ class _RiddlesMenuPageState extends State<RiddlesMenuPage> {
       ),
     );
 
-    // ✅ Если загадка была решена (result == true) — обновляем статус
     if (result == true) {
       await _loadUserProgress();
-
-      // ✅ Показываем уведомление
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Загадка разгадана!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 1),
-        ),
-      );
     }
   }
 

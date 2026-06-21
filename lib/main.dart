@@ -5,6 +5,7 @@ import 'package:Mansi_Translator/services/tts_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'services/app_database.dart';
+import 'services/voice_cash_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -30,6 +31,59 @@ Future<void> _initializeDatabase() async {
   } catch (e) {
     debugPrint('❌ Ошибка инициализации БД: $e');
   }
+  await _preloadAllLearningAudio();
+  debugPrint('✅ Все аудио для обучения предзагружены');
+}
+
+Future<void> _preloadAllLearningAudio() async {
+  try {
+    final voiceCache = VoiceCacheService();
+    await voiceCache.init();
+
+    final modules = await AppDatabase.instance.getModules();
+    int totalTexts = 0;
+
+    for (var module in modules) {
+      final levels = await AppDatabase.instance.getModuleLevels(module.id!);
+      for (var level in levels) {
+        final theoryList = await AppDatabase.instance.getTheory(level.id!);
+        if (theoryList.isNotEmpty) {
+          final texts = _extractTtsTexts(theoryList.first.contentHtml);
+          for (var text in texts) {
+            if (text.trim().isNotEmpty) {
+              await voiceCache.getOrSynthesize(text);
+              totalTexts++;
+            }
+          }
+        }
+      }
+    }
+    debugPrint('✅ Предзагружено $totalTexts аудиофайлов для обучения');
+  } catch (e) {
+    debugPrint('⚠️ Ошибка предзагрузки аудио: $e');
+  }
+}
+
+List<String> _extractTtsTexts(String html) {
+  final List<String> results = [];
+  String remaining = html;
+
+  while (remaining.isNotEmpty) {
+    final ttsStart = remaining.indexOf('<tts>');
+    if (ttsStart == -1) break;
+
+    final ttsEnd = remaining.indexOf('</tts>', ttsStart);
+    if (ttsEnd == -1) break;
+
+    final text = remaining.substring(ttsStart + 5, ttsEnd);
+    if (text.trim().isNotEmpty) {
+      results.add(text.trim());
+    }
+
+    remaining = remaining.substring(ttsEnd + 6);
+  }
+
+  return results;
 }
 
 class MyApp extends StatelessWidget {

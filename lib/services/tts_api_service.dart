@@ -39,13 +39,12 @@ class TtsApiService {
   Future<List<TtsVoiceModel>> getVoices() async {
     return [
       TtsVoiceModel(name: 'galina', description: 'Женский голос, Кондина Галина'),
-      TtsVoiceModel(name: 'irina', description: 'Женский голос, Ирина'),
     ];
   }
 
   Future<Uint8List?> synthesize({
     required String text,
-    String voiceName = 'irina',
+    String voiceName = 'galina',
     double speed = 1.0,
     int nfeStep = 32,
     double cfgStrength = 2.0,
