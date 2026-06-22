@@ -16,15 +16,12 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
   static const Color appGreen = Color(0xFF0A4B47);
   static const Color appBeige = Color(0xFFE7E4DF);
 
-  // Состояния Shift: 0 = выключен, 1 = одно нажатие (одна заглавная), 2 = Caps Lock
   int _shiftState = 0;
 
-  // Строчные буквы
   final List<String> _lowercaseLetters = [
     'а̄', 'о̄', 'ē', 'ы̄', 'э̄', 'ӈ', 'ю̄', 'ӣ', 'я̄', 'ё̄', 'ӯ'
   ];
 
-  // Заглавные буквы
   final List<String> _uppercaseLetters = [
     'А̄', 'О̄', 'Ē', 'Ы̄', 'Э̄', 'Ӈ', 'Ю̄', 'Ӣ', 'Я̄', 'Ё̄', 'Ӯ'
   ];
@@ -34,11 +31,11 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
   void _handleShiftPress() {
     setState(() {
       if (_shiftState == 0) {
-        _shiftState = 1; // Одно нажатие - одна заглавная
+        _shiftState = 1;
       } else if (_shiftState == 1) {
-        _shiftState = 2; // Два нажатия - Caps Lock
+        _shiftState = 2;
       } else {
-        _shiftState = 0; // Выключить Caps Lock
+        _shiftState = 0;
       }
     });
   }
@@ -47,9 +44,7 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
     String outputLetter = letter;
 
     if (_shiftState == 1) {
-      // Режим одной заглавной буквы
       outputLetter = _getUppercaseForLetter(letter);
-      // Выключаем Shift после ввода
       Future.delayed(Duration.zero, () {
         if (mounted) {
           setState(() {
@@ -58,7 +53,6 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
         }
       });
     } else if (_shiftState == 2) {
-      // Caps Lock режим
       outputLetter = _getUppercaseForLetter(letter);
     }
 
@@ -77,18 +71,12 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
   Widget build(BuildContext context) {
     return Container(
       color: appGreen,
-      padding: const EdgeInsets.all(5),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // Кнопка Shift слева
-              _buildShiftButton(),
-              // Основные буквы
-              ..._currentLetters.map((letter) => _buildKey(letter)).toList(),
-            ],
-          ),
+          _buildShiftButton(),
+          ..._currentLetters.map((letter) => _buildKey(letter)).toList(),
         ],
       ),
     );
@@ -97,20 +85,21 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
   Widget _buildKey(String letter) {
     return SizedBox(
       width: 30,
-      height: 40,
+      height: 38,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: appBeige,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(7),
+            borderRadius: BorderRadius.circular(6),
           ),
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(2),
+          minimumSize: const Size(26, 32),
         ),
         onPressed: () => _onKeyTap(letter),
         child: Text(
           letter,
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: FontWeight.w600,
             color: appGreen,
           ),
@@ -132,7 +121,7 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
 
     return SizedBox(
       width: 30,
-      height: 40,
+      height: 38,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -140,9 +129,10 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
             style: ElevatedButton.styleFrom(
               backgroundColor: appBeige,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(6),
               ),
-              padding: const EdgeInsets.all(3),
+              padding: const EdgeInsets.all(2),
+              minimumSize: const Size(26, 32),
             ),
             onPressed: _handleShiftPress,
             child: Icon(
@@ -153,9 +143,9 @@ class _MansiKeyboardState extends State<MansiKeyboard> {
           ),
           if (_shiftState == 1)
             Positioned(
-              bottom: 6,
+              bottom: 4,
               child: Container(
-                width: 16,
+                width: 14,
                 height: 2,
                 color: appGreen,
               ),

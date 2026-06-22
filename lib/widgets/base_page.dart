@@ -1,4 +1,4 @@
-// widgets/base_page.dart
+// base_page.dart
 import 'package:flutter/material.dart';
 import 'app_drawer.dart';
 
@@ -10,6 +10,7 @@ class BasePage extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final FloatingActionButton? floatingActionButton;
   final Color? backgroundColor;
+  final GlobalKey<ScaffoldState>? scaffoldKey;
 
   const BasePage({
     super.key,
@@ -20,14 +21,15 @@ class BasePage extends StatelessWidget {
     this.appBar,
     this.floatingActionButton,
     this.backgroundColor,
+    this.scaffoldKey,
   });
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final bottomPadding = screenHeight * 0.05; // 5% отступ снизу
+    final bottomPadding = 0.0;
 
     return Scaffold(
+      key: scaffoldKey,
       backgroundColor: backgroundColor ?? const Color(0xFFE7E4DF),
       appBar: appBar ?? AppBar(
         leading: Padding(
@@ -58,7 +60,7 @@ class BasePage extends StatelessWidget {
       body: Column(
         children: [
           Expanded(child: child),
-          SizedBox(height: bottomPadding), // Автоматический отступ снизу
+          SizedBox(height: bottomPadding),
         ],
       ),
     );

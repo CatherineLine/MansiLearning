@@ -1,4 +1,4 @@
-// main.dart - обновлённый
+// main.dart - БЕЗ ЗАПРОСА РАЗРЕШЕНИЙ
 import 'dart:async';
 import 'package:Mansi_Translator/pages/translate_page.dart';
 import 'package:Mansi_Translator/services/tts_api_service.dart';
@@ -11,6 +11,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ❌ Запрос разрешений удалён — flutter_media_store использует MediaStore
+
   await AppDatabase.instance.database;
   await AppDatabase.instance.initLearningMaterials();
   unawaited(_initializeDatabase());
@@ -24,7 +27,6 @@ Future<void> _initializeDatabase() async {
     await db.initLearningMaterials();
     debugPrint('✅ База данных инициализирована');
 
-    // ✅ Инициализируем TTS с задержкой
     await Future.delayed(const Duration(seconds: 1));
     await TtsAudioPlayer.init();
     debugPrint('✅ TTS инициализирован');
@@ -109,17 +111,6 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const SplashScreen(),
-      builder: (context, child) {
-        // Глобальный MediaQuery с отступом снизу
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            padding: MediaQuery.of(context).padding.copyWith(
-              bottom: MediaQuery.of(context).size.height * 0.05, // 5% от высоты экрана
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
   }
 }

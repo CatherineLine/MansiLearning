@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import '../base_scafford.dart';
 import '../services/file_translation_service.dart';
 import '../widgets/app_drawer.dart';
@@ -14,6 +13,7 @@ class DocumentTranslationPage extends StatefulWidget {
 class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
   final FileTranslationService _translationService = FileTranslationService();
   bool _isTranslating = false;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -55,16 +55,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
     }
   }
 
-  void _shareTranslatedFile() {
-    final outputFile = _translationService.statusNotifier.value?.outputFile;
-    if (outputFile != null) {
-      Share.shareXFiles(
-        [XFile(outputFile.path)],
-        text: 'Переведённый документ',
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final status = _translationService.statusNotifier.value;
@@ -73,6 +63,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
     final isCompleted = currentProgress == 100;
 
     return BaseScaffold(
+      scaffoldKey: _scaffoldKey,
       appBar: AppBar(
         title: const Text(
           'Перевод документов',
@@ -84,7 +75,7 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openEndDrawer(),
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
           ),
         ],
       ),
@@ -221,6 +212,28 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                 ),
               ),
 
+              // Информация о сохранении
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A4B47).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.folder_open, color: Color(0xFF0A4B47), size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Файл будет сохранён в папку "Загрузки/MansiTranslator"',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF0A4B47)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               // Статус перевода
               if (status != null) ...[
                 const SizedBox(height: 24),
@@ -234,7 +247,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Заголовок с иконкой статуса
                       Row(
                         children: [
                           if (isActiveTranslation)
@@ -265,14 +277,10 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                         ],
                       ),
                       const SizedBox(height: 12),
-
-                      // Статус текстом
                       Text(
                         status.status,
                         style: const TextStyle(fontSize: 14, color: Colors.black87),
                       ),
-
-                      // Прогресс-бар
                       if (currentProgress >= 0 && currentProgress <= 100) ...[
                         const SizedBox(height: 12),
                         ClipRRect(
@@ -294,8 +302,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                           ),
                         ),
                       ],
-
-                      // Кнопка отмены
                       if (isActiveTranslation) ...[
                         const SizedBox(height: 16),
                         OutlinedButton(
@@ -314,40 +320,22 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                           child: const Text('Отменить перевод'),
                         ),
                       ],
-
-                      // Кнопки после завершения
                       if (isCompleted && status.outputFile != null) ...[
                         const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
-                              child: ElevatedButton.icon(
+                              child: OutlinedButton.icon(
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Файл сохранён: ${status.outputFile!.path}'),
+                                      content: Text('Файл сохранён в Загрузки/MansiTranslator/'),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
                                 },
                                 icon: const Icon(Icons.folder_open, size: 18),
-                                label: const Text('Путь к файлу'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0A4B47),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _shareTranslatedFile,
-                                icon: const Icon(Icons.share, size: 18),
-                                label: const Text('Поделиться'),
+                                label: const Text('Где файл?'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF0A4B47),
                                   side: const BorderSide(color: Color(0xFF0A4B47)),
@@ -360,6 +348,12 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Файл сохранён в: Загрузки/MansiTranslator/${status.outputFile!.path.split('/').last}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ],
                   ),
@@ -368,7 +362,6 @@ class _DocumentTranslationPageState extends State<DocumentTranslationPage> {
 
               const SizedBox(height: 24),
 
-              // Информационная карточка
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

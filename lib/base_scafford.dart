@@ -25,8 +25,7 @@ class BaseScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final bottomPadding = screenHeight * 0.02; // 2% от высоты экрана
+    final bottomPadding = 0.0;
 
     return Scaffold(
       key: scaffoldKey ?? key as GlobalKey<ScaffoldState>?,
@@ -38,7 +37,7 @@ class BaseScaffold extends StatelessWidget {
             Expanded(
               child: body,
             ),
-            SizedBox(height: bottomPadding), // Автоматический отступ снизу
+            SizedBox(height: bottomPadding),
           ],
         ),
       ),

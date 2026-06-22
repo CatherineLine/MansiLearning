@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -10,6 +11,7 @@ import '../services/translation_service.dart';
 import '../services/tts_api_service.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/mansi_keyboard.dart';
+import '../widgets/base_page.dart';
 
 // ============================================================
 // VoiceCacheService - кеширование аудио
@@ -69,6 +71,388 @@ class VoiceCacheService {
 }
 
 // ============================================================
+// Экран добавления фразы
+// ============================================================
+class AddPhraseScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> categories;
+  final Function(String, String, int?) onSave;
+  final VoidCallback onCancel;
+
+  const AddPhraseScreen({
+    super.key,
+    required this.categories,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  @override
+  State<AddPhraseScreen> createState() => _AddPhraseScreenState();
+}
+
+class _AddPhraseScreenState extends State<AddPhraseScreen> {
+  final TextEditingController _russianController = TextEditingController();
+  final TextEditingController _mansiController = TextEditingController();
+  int? _selectedCategoryId;
+  bool _isSaving = false;
+
+  final FocusNode _mansiFocusNode = FocusNode();
+  bool _isMansiKeyboardVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _mansiFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isMansiKeyboardVisible = _mansiFocusNode.hasFocus;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _russianController.dispose();
+    _mansiController.dispose();
+    _mansiFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFE7E4DF),
+      appBar: AppBar(
+        title: const Text(
+          'Добавить фразу',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF0A4B47),
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: widget.onCancel,
+        ),
+        actions: [
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          else
+            TextButton(
+              onPressed: _savePhrase,
+              child: const Text(
+                'Сохранить',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  // Фраза на русском
+                  const Text(
+                    'Фраза на русском',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF0A4B47),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _russianController,
+                    decoration: InputDecoration(
+                      hintText: 'Введите фразу на русском...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47), width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47)),
+                      ),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Фраза на мансийском
+                  const Text(
+                    'Фраза на мансийском',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF0A4B47),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _mansiController,
+                    focusNode: _mansiFocusNode,
+                    decoration: InputDecoration(
+                      hintText: 'Введите фразу на мансийском...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47), width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47)),
+                      ),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Категория
+                  const Text(
+                    'Категория',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF0A4B47),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonFormField<int>(
+                      value: _selectedCategoryId,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      hint: const Text('Выберите категорию'),
+                      isExpanded: true,
+                      dropdownColor: const Color(0xFFE7E4DF),
+                      items: [
+                        const DropdownMenuItem<int>(
+                          value: null,
+                          child: Text('Без категории'),
+                        ),
+                        ...widget.categories.map((category) {
+                          return DropdownMenuItem<int>(
+                            value: category['id'],
+                            child: Text(category['name']),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategoryId = value;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+          // ✅ Мансийская клавиатура (встроена в дерево)
+          if (_isMansiKeyboardVisible)
+            MansiKeyboard(
+              onTextInput: (text) {
+                _mansiController.text += text;
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _savePhrase() {
+    final russian = _russianController.text.trim();
+    final mansi = _mansiController.text.trim();
+
+    if (russian.isEmpty || mansi.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Заполните оба поля'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    widget.onSave(russian, mansi, _selectedCategoryId);
+    // Страница закроется после сохранения через Navigator.pop
+  }
+}
+
+// ============================================================
+// Экран добавления категории
+// ============================================================
+class AddCategoryScreen extends StatefulWidget {
+  final Function(String) onSave;
+  final VoidCallback onCancel;
+
+  const AddCategoryScreen({
+    super.key,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  @override
+  State<AddCategoryScreen> createState() => _AddCategoryScreenState();
+}
+
+class _AddCategoryScreenState extends State<AddCategoryScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _isMansiKeyboardVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isMansiKeyboardVisible = _focusNode.hasFocus;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFE7E4DF),
+      appBar: AppBar(
+        title: const Text(
+          'Новая категория',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF0A4B47),
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: widget.onCancel,
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saveCategory,
+            child: const Text(
+              'Сохранить',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 40),
+                  const Text(
+                    'Название категории',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF0A4B47),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    decoration: InputDecoration(
+                      hintText: 'Введите название...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47), width: 2),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF0A4B47)),
+                      ),
+                    ),
+                    autofocus: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // ✅ Мансийская клавиатура (встроена в дерево)
+          if (_isMansiKeyboardVisible)
+            MansiKeyboard(
+              onTextInput: (text) {
+                _controller.text += text;
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _saveCategory() {
+    final name = _controller.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Введите название категории'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    widget.onSave(name);
+  }
+}
+
+// ============================================================
 // Основная страница разговорника
 // ============================================================
 class PhrasebookPage extends StatefulWidget {
@@ -98,44 +482,23 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
   bool _showOnlyFavorites = false;
   final TextEditingController _searchController = TextEditingController();
 
-  final TextEditingController _newCategoryController = TextEditingController();
-  final TextEditingController _newRussianPhraseController = TextEditingController();
-  final TextEditingController _newMansiPhraseController = TextEditingController();
-  int? _selectedCategoryForPhrase;
-
-  bool _isTranslating = false;
-  Set<String> _preloadedPhrases = {};
-
-  // ✅ Для мансийской клавиатуры (как в переводчике)
-  final FocusNode _mansiFocusNode = FocusNode();
-  bool _isMansiKeyboardVisible = false;
-
   @override
   void initState() {
     super.initState();
     _loadData();
     _voiceCache.init();
     TtsAudioPlayer.init();
-
-    _mansiFocusNode.addListener(() {
-      if (mounted) {
-        setState(() {
-          _isMansiKeyboardVisible = _mansiFocusNode.hasFocus;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
-    _newCategoryController.dispose();
-    _newRussianPhraseController.dispose();
-    _newMansiPhraseController.dispose();
     _searchController.dispose();
-    _mansiFocusNode.dispose();
     super.dispose();
   }
 
+  // ============================================================
+  // Основные методы
+  // ============================================================
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
@@ -245,6 +608,8 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
       }
     });
   }
+
+  Set<String> _preloadedPhrases = {};
 
   List<Map<String, dynamic>> _getFilteredPhrases() {
     return _currentPhrases.where((phrase) {
@@ -447,17 +812,7 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
     }
   }
 
-  Future<void> _addPhraseWithoutCategory() async {
-    final russian = _newRussianPhraseController.text.trim();
-    final mansi = _newMansiPhraseController.text.trim();
-
-    if (russian.isEmpty || mansi.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заполните оба поля')),
-      );
-      return;
-    }
-
+  Future<void> _addPhraseWithoutCategory(String russian, String mansi) async {
     int? uncategorizedId;
     for (var c in _categories) {
       if (c['name'] == 'Без категории') {
@@ -477,8 +832,6 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
       textMansi: mansi,
     );
 
-    _newRussianPhraseController.clear();
-    _newMansiPhraseController.clear();
     await _loadAllPhrases();
 
     if (_showAllPhrases) {
@@ -486,33 +839,15 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
     } else if (_selectedCategoryId == uncategorizedId) {
       await _loadPhrasesForCategory(uncategorizedId);
     }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Фраза добавлена')),
-      );
-    }
   }
 
-  Future<void> _addPhraseToCategory(int categoryId) async {
-    final russian = _newRussianPhraseController.text.trim();
-    final mansi = _newMansiPhraseController.text.trim();
-
-    if (russian.isEmpty || mansi.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заполните оба поля')),
-      );
-      return;
-    }
-
+  Future<void> _addPhraseToCategory(String russian, String mansi, int categoryId) async {
     await AppDatabase.instance.addPhrase(
       categoryId: categoryId,
       textRussian: russian,
       textMansi: mansi,
     );
 
-    _newRussianPhraseController.clear();
-    _newMansiPhraseController.clear();
     await _loadAllPhrases();
 
     if (_showAllPhrases) {
@@ -520,365 +855,16 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
     } else if (_selectedCategoryId == categoryId) {
       await _loadPhrasesForCategory(categoryId);
     }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Фраза добавлена')),
-      );
-    }
-  }
-
-  Future<void> _addCategory() async {
-    if (_newCategoryController.text.trim().isEmpty) return;
-
-    final name = _newCategoryController.text.trim();
-    await AppDatabase.instance.addPhraseCategory(name);
-    _newCategoryController.clear();
-    await _loadCategories();
-    await _loadAllPhrases();
-    setState(() {});
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Категория добавлена')),
-      );
-    }
-  }
-
-  Future<void> _translateToRussian() async {
-    final mansi = _newMansiPhraseController.text.trim();
-    if (mansi.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите фразу на мансийском для перевода')),
-      );
-      return;
-    }
-
-    setState(() => _isTranslating = true);
-    try {
-      final translated = await _translationService.translate(
-        text: mansi,
-        sourceLang: 'mansi',
-        targetLang: 'ru',
-      );
-      _newRussianPhraseController.text = translated;
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка перевода: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() => _isTranslating = false);
-    }
-  }
-
-  Future<void> _translateToMansi() async {
-    final russian = _newRussianPhraseController.text.trim();
-    if (russian.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите фразу на русском для перевода')),
-      );
-      return;
-    }
-
-    setState(() => _isTranslating = true);
-    try {
-      final translated = await _translationService.translate(
-        text: russian,
-        sourceLang: 'ru',
-        targetLang: 'mansi',
-      );
-      _newMansiPhraseController.text = translated;
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка перевода: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() => _isTranslating = false);
-    }
   }
 
   void _speakPhrase(String text) {
-    if (text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нет текста для озвучивания')),
-      );
-      return;
-    }
+    if (text.trim().isEmpty) return;
 
     _voiceCache.getOrSynthesize(text).then((audioBytes) {
       if (audioBytes != null) {
         TtsAudioPlayer.play(audioBytes, text: text);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось озвучить фразу'), backgroundColor: Colors.red),
-        );
       }
     });
-  }
-
-  void _showAddPhraseDialog() {
-    _newRussianPhraseController.clear();
-    _newMansiPhraseController.clear();
-    _selectedCategoryForPhrase = null;
-
-    final availableCategories = _categories.where((c) => c['name'] != 'Без категории').toList();
-
-    // ✅ Показываем кастомный диалог через showGeneralDialog
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "Закрыть",
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return Material(
-              color: Colors.transparent,
-              child: Center(
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  constraints: const BoxConstraints(maxHeight: 500),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Заголовок
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0A4B47),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.add, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              'Добавить фразу',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Контент
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextField(
-                                controller: _newRussianPhraseController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Фраза на русском',
-                                  labelStyle: TextStyle(color: Color(0xFF0A4B47)),
-                                  border: OutlineInputBorder(),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
-                                  ),
-                                ),
-                                maxLines: 2,
-                              ),
-                              const SizedBox(height: 12),
-
-                              TextField(
-                                controller: _newMansiPhraseController,
-                                focusNode: _mansiFocusNode,
-                                decoration: const InputDecoration(
-                                  labelText: 'Фраза на мансийском',
-                                  labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0A4B47)),
-                                  border: OutlineInputBorder(),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
-                                  ),
-                                ),
-                                maxLines: 2,
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: _isTranslating ? null : _translateToMansi,
-                                      icon: const Icon(Icons.translate, size: 18),
-                                      label: const Text('Рус → Манс'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: const Color(0xFF0A4B47),
-                                        side: const BorderSide(color: Color(0xFF0A4B47)),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: _isTranslating ? null : _translateToRussian,
-                                      icon: const Icon(Icons.translate, size: 18),
-                                      label: const Text('Манс → Рус'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: const Color(0xFF0A4B47),
-                                        side: const BorderSide(color: Color(0xFF0A4B47)),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              if (_isTranslating)
-                                const Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: LinearProgressIndicator(),
-                                ),
-
-                              const SizedBox(height: 12),
-
-                              Container(
-                                constraints: const BoxConstraints(maxWidth: 300),
-                                child: DropdownButtonFormField<int>(
-                                  value: _selectedCategoryForPhrase,
-                                  decoration: InputDecoration(
-                                    labelText: 'Категория',
-                                    labelStyle: const TextStyle(color: Color(0xFF0A4B47)),
-                                    border: const OutlineInputBorder(),
-                                    focusedBorder: const OutlineInputBorder(
-                                      borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
-                                    ),
-                                    enabledBorder: const OutlineInputBorder(
-                                      borderSide: BorderSide(color: Color(0xFF0A4B47)),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                  hint: const Text('Выберите категорию'),
-                                  isExpanded: true,
-                                  isDense: true,
-                                  menuMaxHeight: 200,
-                                  items: [
-                                    const DropdownMenuItem<int>(
-                                      value: null,
-                                      child: Text('Без категории'),
-                                    ),
-                                    ...availableCategories.map((category) {
-                                      return DropdownMenuItem<int>(
-                                        value: category['id'],
-                                        child: Text(
-                                          category['name'],
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      );
-                                    }),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedCategoryForPhrase = value;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // Кнопки действий
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(16),
-                            bottomRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF0A4B47),
-                                ),
-                                child: const Text('Отмена'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  if (_selectedCategoryForPhrase != null) {
-                                    await _addPhraseToCategory(_selectedCategoryForPhrase!);
-                                  } else {
-                                    await _addPhraseWithoutCategory();
-                                  }
-                                  if (mounted) Navigator.pop(context);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0A4B47),
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Добавить'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showAddCategoryDialog() {
-    _newCategoryController.clear();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Новая категория'),
-        content: TextField(
-          controller: _newCategoryController,
-          decoration: const InputDecoration(
-            hintText: 'Название категории',
-            border: OutlineInputBorder(),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF0A4B47), width: 2),
-            ),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFF0A4B47)),
-            child: const Text('Отмена'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _addCategory();
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0A4B47),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Добавить'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _handleCategoryTap(int categoryId) async {
@@ -896,57 +882,85 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
     }
   }
 
-  String _getCurrentCategoryName() {
-    if (_showAllPhrases) return 'Все фразы';
-    if (_selectedCategoryId != null) {
-      for (var c in _categories) {
-        if (c['id'] == _selectedCategoryId) {
-          return c['name'] ?? '';
-        }
-      }
-    }
-    return '';
+  // ============================================================
+  // ✅ Открытие экрана добавления фразы
+  // ============================================================
+  void _openAddPhraseScreen() {
+    final availableCategories = _categories.where((c) => c['name'] != 'Без категории').toList();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddPhraseScreen(
+          categories: availableCategories,
+          onSave: (russian, mansi, categoryId) async {
+            try {
+              if (categoryId != null) {
+                await _addPhraseToCategory(russian, mansi, categoryId);
+              } else {
+                await _addPhraseWithoutCategory(russian, mansi);
+              }
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Фраза добавлена')),
+                );
+                Navigator.pop(context);
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+                );
+              }
+            }
+          },
+          onCancel: () => Navigator.pop(context),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // ✅ Открытие экрана добавления категории
+  // ============================================================
+  void _openAddCategoryScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddCategoryScreen(
+          onSave: (name) async {
+            try {
+              await AppDatabase.instance.addPhraseCategory(name);
+              await _loadCategories();
+              await _loadAllPhrases();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Категория добавлена')),
+                );
+                Navigator.pop(context);
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+                );
+              }
+            }
+          },
+          onCancel: () => Navigator.pop(context),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final filteredPhrases = _getFilteredPhrases();
-    final currentCategoryName = _getCurrentCategoryName();
 
-    return BaseScaffold(
-      appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset("assets/images/logo.png"),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "Разговорник",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.white),
-            ),
-            if (currentCategoryName.isNotEmpty)
-              Text(
-                currentCategoryName,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: Colors.white70),
-              ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF0A4B47),
-        foregroundColor: Colors.white,
-        actions: [
-          Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-            ),
-          ),
-        ],
-      ),
-      endDrawer: const AppDrawer(activeSection: DrawerActiveSection.phrasebook),
-      body: Column(
+    return BasePage(
+      title: "Разговорник",
+      activeSection: DrawerActiveSection.phrasebook,
+      child: Column(
         children: [
           if (_isPreloading)
             const LinearProgressIndicator(
@@ -1063,7 +1077,7 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _showAddCategoryDialog,
+                    onPressed: _openAddCategoryScreen,
                     icon: const Icon(Icons.folder_open, size: 18, color: Color(0xFF0A4B47)),
                     label: const Text(
                       'Добавить категорию',
@@ -1078,7 +1092,7 @@ class _PhrasebookPageState extends State<PhrasebookPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _showAddPhraseDialog,
+                    onPressed: _openAddPhraseScreen,
                     icon: const Icon(Icons.add, size: 18, color: Colors.white),
                     label: const Text(
                       'Добавить фразу',
